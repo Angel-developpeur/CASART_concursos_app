@@ -49,13 +49,30 @@ class AppDatabase {
       );
     }
 
-    final documentsDirectory = await getApplicationDocumentsDirectory();
-    final casartDir = Directory(p.join(documentsDirectory.path, 'CASART_Concursos'));
-    if (!await casartDir.exists()) {
-      await casartDir.create(recursive: true);
+    final casartDir = await getCasartDirectory();
+    final path = p.join(casartDir.path, 'concursos_offline.db');
+    final dbFile = File(path);
+
+    // Migración automática de datos si existía en Documentos
+    if (!await dbFile.exists()) {
+      try {
+        final docs = await getApplicationDocumentsDirectory();
+        final oldFile = File(p.join(docs.path, 'CASART_Concursos', 'concursos_offline.db'));
+        if (await oldFile.exists()) {
+          await oldFile.copy(path);
+          AppLogger.info(
+            'Base de datos migrada exitosamente desde Documentos a: $path',
+            category: 'DATABASE',
+          );
+        }
+      } catch (e) {
+        AppLogger.warn(
+          'No se pudo migrar la base de datos previa desde Documentos: $e',
+          category: 'DATABASE',
+        );
+      }
     }
 
-    final path = p.join(casartDir.path, 'concursos_offline.db');
     AppLogger.info('Abriendo base de datos SQLite en: $path', category: 'DATABASE');
 
     return await databaseFactory.openDatabase(
@@ -996,8 +1013,7 @@ class AppDatabase {
     await db.close();
     _database = null;
 
-    final documentsDirectory = await getApplicationDocumentsDirectory();
-    final sourcePath = p.join(documentsDirectory.path, 'CASART_Concursos', 'concursos_offline.db');
+    final sourcePath = await getDatabasePath();
     final sourceFile = File(sourcePath);
     if (await sourceFile.exists()) {
       await sourceFile.copy(destinationPath);
@@ -1012,9 +1028,27 @@ class AppDatabase {
     _database = await _initDatabase();
   }
 
+  /// Retorna el directorio base de la aplicación CASART en C:\Users\<usuario>\CASART_Concursos
+  static Future<Directory> getCasartDirectory() async {
+    String? userHome = Platform.environment['USERPROFILE'];
+    if (userHome == null || userHome.isEmpty) {
+      userHome = Platform.environment['HOME'];
+    }
+    if (userHome == null || userHome.isEmpty) {
+      final docs = await getApplicationDocumentsDirectory();
+      userHome = docs.path;
+    }
+
+    final casartDir = Directory(p.join(userHome, 'CASART_Concursos'));
+    if (!await casartDir.exists()) {
+      await casartDir.create(recursive: true);
+    }
+    return casartDir;
+  }
+
   /// Retorna la ruta física del archivo de la base de datos
   Future<String> getDatabasePath() async {
-    final documentsDirectory = await getApplicationDocumentsDirectory();
-    return p.join(documentsDirectory.path, 'CASART_Concursos', 'concursos_offline.db');
+    final casartDir = await getCasartDirectory();
+    return p.join(casartDir.path, 'concursos_offline.db');
   }
 }

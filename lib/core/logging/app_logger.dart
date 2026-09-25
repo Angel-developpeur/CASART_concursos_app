@@ -137,7 +137,8 @@ class AppLogger {
       final exeDir = exeFile.parent;
 
       // Detectar si estamos en el directorio de la aplicación compilada
-      final hasExe = await File(p.join(exeDir.path, 'casart_concursos_desktop.exe')).exists();
+      final hasExe = await File(p.join(exeDir.path, 'concursos-casart-angel.exe')).exists() ||
+                     await File(p.join(exeDir.path, 'casart_concursos_desktop.exe')).exists();
       final hasDll = await File(p.join(exeDir.path, 'flutter_windows.dll')).exists();
       final hasData = await Directory(p.join(exeDir.path, 'data')).exists();
 
@@ -157,13 +158,20 @@ class AppLogger {
         return p.join(portableLogsDir.path, 'casart_actividad.log');
       }
     } catch (_) {
-      // Fallback a Documentos si no hay permisos de escritura en la carpeta del ejecutable
+      // Fallback si no hay permisos de escritura en la carpeta del ejecutable
     }
 
-    // 2. Ruta estándar de Documentos
+    // 2. Ruta estándar en C:\Users\<usuario>\CASART_Concursos\logs
     try {
-      final docsDir = await getApplicationDocumentsDirectory();
-      final logsDir = Directory(p.join(docsDir.path, 'CASART_Concursos', 'logs'));
+      String? userHome = Platform.environment['USERPROFILE'];
+      if (userHome == null || userHome.isEmpty) {
+        userHome = Platform.environment['HOME'];
+      }
+      if (userHome == null || userHome.isEmpty) {
+        final docsDir = await getApplicationDocumentsDirectory();
+        userHome = docsDir.path;
+      }
+      final logsDir = Directory(p.join(userHome, 'CASART_Concursos', 'logs'));
       if (!await logsDir.exists()) {
         await logsDir.create(recursive: true);
       }

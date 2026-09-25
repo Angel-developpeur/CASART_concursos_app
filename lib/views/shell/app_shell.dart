@@ -11,6 +11,7 @@ import '../premios/premios_view.dart';
 import '../backup/backup_view.dart';
 import '../backup/log_viewer_dialog.dart';
 import '../network/network_config_dialog.dart';
+import '../common/update_dialog.dart';
 import '../../core/theme/app_theme.dart';
 
 class AppShell extends ConsumerStatefulWidget {
@@ -231,6 +232,50 @@ class _AppShellState extends ConsumerState<AppShell> {
                         'v1.0.0\nAngel developpeur',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.white54, fontSize: 10),
+                      ),
+                      const SizedBox(height: 10),
+                      InkWell(
+                        onTap: () => showDialog(
+                          context: context,
+                          builder: (ctx) => const UpdateDialog(),
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: AppTheme.ocreAccent.withValues(alpha: 0.5),
+                                width: 1,
+                              ),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.system_update_alt,
+                                  size: 13,
+                                  color: AppTheme.ocreAccent,
+                                ),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Buscar actualizaciones',
+                                  style: TextStyle(
+                                    color: AppTheme.ocreAccent,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),

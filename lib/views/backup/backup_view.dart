@@ -12,6 +12,8 @@ import '../../models/concurso.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/logging/app_logger.dart';
+import '../../core/services/update_service.dart';
+import '../common/update_dialog.dart';
 import 'log_viewer_dialog.dart';
 
 class BackupView extends ConsumerStatefulWidget {
@@ -553,6 +555,15 @@ class _BackupViewState extends ConsumerState<BackupView> {
                                   style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
                                 ),
                               ),
+                              IconButton(
+                                icon: const Icon(Icons.open_in_new, size: 18),
+                                tooltip: 'Abrir carpeta en el Explorador',
+                                onPressed: () {
+                                  if (_dbPath.isNotEmpty) {
+                                    Process.run('explorer.exe', [File(_dbPath).parent.path]);
+                                  }
+                                },
+                              ),
                             ],
                           ),
                           const SizedBox(height: 10),
@@ -1073,6 +1084,111 @@ class _BackupViewState extends ConsumerState<BackupView> {
                           ),
                         ],
                       ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // ==========================================
+            // 6. ACTUALIZACIONES DEL SISTEMA (GITHUB)
+            // ==========================================
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppTheme.casart800.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.system_update_alt,
+                            color: AppTheme.casart800,
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Actualizaciones del Software',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'Comprobación automática y descarga de nuevas versiones desde GitHub Releases.',
+                              style: TextStyle(color: Colors.grey, fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 32),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline, size: 20, color: Colors.grey),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Versión instalada:',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'v${UpdateService.currentVersion}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.casart800,
+                            ),
+                          ),
+                          const SizedBox(width: 24),
+                          const Text(
+                            'Repositorio oficial:',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            '${UpdateService.owner}/${UpdateService.repo}',
+                            style: TextStyle(fontFamily: 'monospace', fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.sync),
+                      label: const Text('Buscar Actualizaciones Ahora'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.casart800,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
+                        ),
+                      ),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => const UpdateDialog(),
+                        );
+                      },
                     ),
                   ],
                 ),
