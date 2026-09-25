@@ -32,20 +32,24 @@ class UpdateInfo {
 class UpdateService {
   static const String owner = 'Angel-developpeur';
   static const String repo = 'CASART_concursos_app';
-  static const String currentVersion = '1.0.0';
+  static const String currentVersion = '1.0.1';
 
   /// Consulta la API pública de GitHub Releases para comprobar si hay una versión superior
   static Future<UpdateInfo> checkForUpdate() async {
-    final url = Uri.parse('https://api.github.com/repos/$owner/$repo/releases/latest');
+    final url = Uri.parse(
+      'https://api.github.com/repos/$owner/$repo/releases/latest',
+    );
 
     try {
-      final response = await http.get(
-        url,
-        headers: {
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'CASART-Concursos-Desktop',
-        },
-      ).timeout(const Duration(seconds: 12));
+      final response = await http
+          .get(
+            url,
+            headers: {
+              'Accept': 'application/vnd.github.v3+json',
+              'User-Agent': 'CASART-Concursos-Desktop',
+            },
+          )
+          .timeout(const Duration(seconds: 12));
 
       if (response.statusCode == 404) {
         // No hay releases creados aún en el repositorio de GitHub
@@ -54,20 +58,26 @@ class UpdateService {
           latestVersion: currentVersion,
           hasUpdate: false,
           title: 'Versión v$currentVersion',
-          releaseNotes: 'Tu aplicación está al día. Aún no hay versiones publicadas en GitHub Releases.',
+          releaseNotes:
+              'Tu aplicación está al día. Aún no hay versiones publicadas en GitHub Releases.',
         );
       }
 
       if (response.statusCode != 200) {
-        throw Exception('El servidor de GitHub respondió con código: ${response.statusCode}');
+        throw Exception(
+          'El servidor de GitHub respondió con código: ${response.statusCode}',
+        );
       }
 
-      final data = json.decode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+      final data =
+          json.decode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
       final tagName = (data['tag_name'] as String? ?? '').trim();
       final releaseName = (data['name'] as String? ?? tagName).trim();
       final releaseNotes = (data['body'] as String? ?? '').trim();
       final publishedAtStr = data['published_at'] as String?;
-      final publishedAt = publishedAtStr != null ? DateTime.tryParse(publishedAtStr) : null;
+      final publishedAt = publishedAtStr != null
+          ? DateTime.tryParse(publishedAtStr)
+          : null;
 
       // Buscar el archivo instalador ejecutable (.exe)
       String? downloadUrl;
@@ -92,7 +102,9 @@ class UpdateService {
         currentVersion: currentVersion,
         latestVersion: latestCleanVersion,
         hasUpdate: hasUpdate,
-        title: releaseName.isNotEmpty ? releaseName : 'Versión $latestCleanVersion',
+        title: releaseName.isNotEmpty
+            ? releaseName
+            : 'Versión $latestCleanVersion',
         releaseNotes: releaseNotes.isNotEmpty
             ? releaseNotes
             : 'Sin notas de versión disponibles.',
@@ -149,7 +161,8 @@ class UpdateService {
   static Future<String> downloadInstaller({
     required String downloadUrl,
     required String fileName,
-    required Function(double progress, int receivedBytes, int totalBytes) onProgress,
+    required Function(double progress, int receivedBytes, int totalBytes)
+    onProgress,
   }) async {
     final client = http.Client();
     try {
@@ -158,7 +171,9 @@ class UpdateService {
       final response = await client.send(request);
 
       if (response.statusCode != 200) {
-        throw Exception('Error al descargar instalador: HTTP ${response.statusCode}');
+        throw Exception(
+          'Error al descargar instalador: HTTP ${response.statusCode}',
+        );
       }
 
       final totalBytes = response.contentLength ?? 0;
@@ -198,7 +213,9 @@ class UpdateService {
   /// Ejecuta el instalador descargado y cierra la aplicación para permitir el reemplazo
   static Future<void> launchInstallerAndExit(String installerPath) async {
     if (!Platform.isWindows) {
-      throw UnsupportedError('El instalador automático solo está disponible en Windows');
+      throw UnsupportedError(
+        'El instalador automático solo está disponible en Windows',
+      );
     }
 
     AppLogger.info(
@@ -207,11 +224,7 @@ class UpdateService {
     );
 
     // Ejecuta el instalador en modo desasociado (detached)
-    await Process.start(
-      installerPath,
-      [],
-      mode: ProcessStartMode.detached,
-    );
+    await Process.start(installerPath, [], mode: ProcessStartMode.detached);
 
     // Cierra la aplicación actual de inmediato para liberar dlls y ejecutables
     exit(0);

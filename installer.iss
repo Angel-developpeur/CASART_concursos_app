@@ -25,6 +25,7 @@ SetupIconFile=windows\runner\resources\app_icon.ico
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
+CloseApplications=yes
 
 [Languages]
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
@@ -43,6 +44,7 @@ Source: "build\windows\x64\runner\Release\data\*"; DestDir: "{app}\data"; Flags:
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{autoprograms}\Desinstalar {#MyAppName}"; Filename: "{uninstallexe}"
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
