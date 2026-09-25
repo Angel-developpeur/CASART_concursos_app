@@ -21,6 +21,7 @@
   En pubspec.yaml, cambia por ejemplo:
     version: 1.0.1+2
   (Y en update_service.dart:32 actualiza static const String currentVersion = '1.0.1';).
+  y el app_sheell.dart que contien la barra dwe navegaciones donde dice version angel developpeur
   2. Compilar la versión final:
     flutter build windows --release
 

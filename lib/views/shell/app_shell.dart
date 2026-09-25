@@ -229,7 +229,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        'v1.0.0\nAngel developpeur',
+                        'v1.0.1\nAngel developpeur',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.white54, fontSize: 10),
                       ),
@@ -251,7 +251,9 @@ class _AppShellState extends ConsumerState<AppShell> {
                               color: Colors.white.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: AppTheme.ocreAccent.withValues(alpha: 0.5),
+                                color: AppTheme.ocreAccent.withValues(
+                                  alpha: 0.5,
+                                ),
                                 width: 1,
                               ),
                             ),
@@ -477,7 +479,11 @@ class _AppShellState extends ConsumerState<AppShell> {
 
                       // BOTÓN ACCESO DIRECTO A LOGS / BITÁCORA
                       OutlinedButton.icon(
-                        icon: const Icon(Icons.receipt_long, size: 16, color: Colors.blueGrey),
+                        icon: const Icon(
+                          Icons.receipt_long,
+                          size: 16,
+                          color: Colors.blueGrey,
+                        ),
                         label: const Text(
                           'Logs',
                           style: TextStyle(
@@ -487,7 +493,10 @@ class _AppShellState extends ConsumerState<AppShell> {
                           ),
                         ),
                         style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
                           side: BorderSide(color: Colors.grey.shade300),
                         ),
                         onPressed: () {
