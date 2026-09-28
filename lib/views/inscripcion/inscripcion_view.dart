@@ -492,7 +492,10 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
         // Abrir visor de impresión directamente
         showDialog(
           context: context,
-          builder: (ctx) => ComprobanteDialog(registro: nuevoRegistro),
+          builder: (ctx) => ComprobanteDialog(
+            registro: nuevoRegistro,
+            concurso: concurso,
+          ),
         );
       }
     } catch (e) {
@@ -2386,7 +2389,10 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                                     showDialog(
                                       context: context,
                                       builder: (c) =>
-                                          ComprobanteDialog(registro: r),
+                                          ComprobanteDialog(
+                                            registro: r,
+                                            concurso: concurso,
+                                          ),
                                     );
                                   },
                                 ),
@@ -2441,6 +2447,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                                                 builder: (c) =>
                                                     ComprobanteDialog(
                                                       registro: resultado,
+                                                      concurso: concurso,
                                                     ),
                                               );
                                             },

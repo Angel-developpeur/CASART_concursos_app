@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 import '../../models/registro_concurso.dart';
+import '../../models/concurso.dart';
 import '../../core/utils/pdf_generator.dart';
 import '../../core/theme/app_theme.dart';
 
 class ComprobanteDialog extends StatelessWidget {
   final RegistroConcurso registro;
+  final Concurso? concurso;
 
-  const ComprobanteDialog({super.key, required this.registro});
+  const ComprobanteDialog({super.key, required this.registro, this.concurso});
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +51,10 @@ class ComprobanteDialog extends StatelessWidget {
             ),
             Expanded(
               child: PdfPreview(
-                build: (format) => PdfGenerator.generateComprobanteInscripcion(registro),
+                build: (format) => PdfGenerator.generateComprobanteInscripcion(
+                  registro,
+                  concurso: concurso,
+                ),
                 initialPageFormat: const PdfPageFormat(
                   215 * PdfPageFormat.mm,
                   215 * PdfPageFormat.mm,

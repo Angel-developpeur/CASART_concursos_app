@@ -6,6 +6,8 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../../models/registro_concurso.dart';
+import '../../models/concurso.dart';
+import '../database/app_database.dart';
 
 class PdfGenerator {
   static const double mm = PdfPageFormat.mm;
@@ -62,7 +64,13 @@ class PdfGenerator {
     if (str == null || str.isEmpty) return '';
     final upper = str.toUpperCase();
     const accents = {
-      'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ú': 'U', 'Ü': 'U', 'Ñ': 'N',
+      'Á': 'A',
+      'É': 'E',
+      'Í': 'I',
+      'Ó': 'O',
+      'Ú': 'U',
+      'Ü': 'U',
+      'Ñ': 'N',
     };
     var result = upper;
     accents.forEach((k, v) {
@@ -97,7 +105,9 @@ class PdfGenerator {
       };
       plazoClean = plurales[plazoClean] ?? plazoClean;
     }
-    final numText = (val == val.toInt()) ? val.toInt().toString() : val.toString();
+    final numText = (val == val.toInt())
+        ? val.toInt().toString()
+        : val.toString();
     final res = '$numText $plazoClean'.trim();
     return res.isEmpty ? 'N/A' : res;
   }
@@ -113,7 +123,8 @@ class PdfGenerator {
     required String localidad,
   }) {
     final claveClean = _normalizeText(clave);
-    final costoVentaClean = '\$${NumberFormat('#,##0.00', 'en_US').format(costoVenta)}';
+    final costoVentaClean =
+        '\$${NumberFormat('#,##0.00', 'en_US').format(costoVenta)}';
     final artesaniaClean = _normalizeText(artesaniaNombre);
     final ramaClean = _normalizeText(categoria);
     final artesanoClean = _normalizeText(artesanoNombre);
@@ -141,8 +152,25 @@ class PdfGenerator {
         'END:VCARD';
   }
 
+  /// Obtiene el nombre oficial del concurso concatenado con su ejercicio
+  static String resolverNombreConcurso(Concurso? concurso) {
+    if (concurso == null) {
+      return 'CONCURSO ESTATAL DE ARTESANÍAS';
+    }
+    final nombre = concurso.nombre.trim();
+    final ejercicio = concurso.ejercicio.trim();
+    if (ejercicio.isNotEmpty &&
+        !nombre.toUpperCase().endsWith(ejercicio.toUpperCase())) {
+      return '$nombre $ejercicio'.toUpperCase();
+    }
+    return nombre.toUpperCase();
+  }
+
   /// Genera el documento PDF de inscripción oficial con el diseño exacto de inscripcion_concurso.blade.php
-  static Future<Uint8List> generateComprobanteInscripcion(RegistroConcurso registro) async {
+  static Future<Uint8List> generateComprobanteInscripcion(
+    RegistroConcurso registro, {
+    Concurso? concurso,
+  }) async {
     final pdf = pw.Document();
 
     // Tamaño oficial: 215mm x 215mm
@@ -150,23 +178,47 @@ class PdfGenerator {
 
     // Cargar logos
     final fonartBytes = await _loadAssetBytes('assets/images/logo_fonart.png');
-    final fonartImage = fonartBytes != null ? pw.MemoryImage(fonartBytes) : null;
-    final casartSvg = await _loadAssetString('assets/images/casa_artesanias.svg');
+    final fonartImage = fonartBytes != null
+        ? pw.MemoryImage(fonartBytes)
+        : null;
+    final casartSvg = await _loadAssetString(
+      'assets/images/casa_artesanias.svg',
+    );
 
     // Datos del concurso, artesano y piezas
-    final concurso = registro.concurso;
+    Concurso? concursoFinal = concurso ?? registro.concurso;
+    if (concursoFinal == null && registro.idConcurso > 0) {
+      try {
+        final db = await AppDatabase().database;
+        final cRows = await db.query(
+          'concurso',
+          where: 'id = ?',
+          whereArgs: [registro.idConcurso],
+        );
+        if (cRows.isNotEmpty) {
+          concursoFinal = Concurso.fromMap(cRows.first);
+        }
+      } catch (_) {}
+    }
+
     final artesano = registro.artesano;
     final p1 = registro.artesania1;
     final p2 = registro.artesania2;
 
     final String folio = registro.folio.toString().padLeft(4, '0');
-    final String nombreDelConcurso = (concurso?.nombre ?? 'CONCURSO ESTATAL DE ARTESANÍAS').toUpperCase();
-    final String artesanoNombre = (artesano?.nombreCompleto ?? 'N/A').toUpperCase();
-    final String artesanoLocalidad = ((artesano?.localidad != null && artesano!.localidad.isNotEmpty)
-            ? artesano.localidad
-            : ((artesano?.municipio != null && artesano!.municipio.isNotEmpty) ? artesano.municipio : 'N/A'))
+    final String nombreDelConcurso = resolverNombreConcurso(concursoFinal);
+    final String artesanoNombre = (artesano?.nombreCompleto ?? 'N/A')
         .toUpperCase();
-    final String artesanoTelefono = (artesano?.telefono != null && artesano!.telefono!.isNotEmpty)
+    final String artesanoLocalidad =
+        ((artesano?.localidad != null && artesano!.localidad.isNotEmpty)
+                ? artesano.localidad
+                : ((artesano?.municipio != null &&
+                          artesano!.municipio.isNotEmpty)
+                      ? artesano.municipio
+                      : 'N/A'))
+            .toUpperCase();
+    final String artesanoTelefono =
+        (artesano?.telefono != null && artesano!.telefono!.isNotEmpty)
         ? artesano.telefono!
         : 'N/A';
 
@@ -174,18 +226,32 @@ class PdfGenerator {
     final String piezaANombre = (p1?.nombre ?? 'N/A').toUpperCase();
     final double piezaAValor = p1?.costoProduccion ?? 0.0;
     final double piezaAVenta = p1?.costoVenta ?? 0.0;
-    final String piezaACategoria = (p1?.categoriaNombre ?? p1?.ramaNombre ?? 'N/A').toUpperCase();
-    final String piezaATecnica = (p1?.subcategoriaNombre ?? 'N/A').toUpperCase();
-    final String piezaATiempo = _formatearTiempo(p1?.tiempoElaboracion, p1?.plazoElaboracion);
+    final String piezaACategoria =
+        (p1?.categoriaNombre ?? p1?.ramaNombre ?? 'N/A').toUpperCase();
+    final String piezaATecnica = (p1?.subcategoriaNombre ?? 'N/A')
+        .toUpperCase();
+    final String piezaATiempo = _formatearTiempo(
+      p1?.tiempoElaboracion,
+      p1?.plazoElaboracion,
+    );
 
     // Pieza B
-    final bool hasPiezaB = p2 != null && p2.nombre.trim().isNotEmpty && p2.nombre.trim().toUpperCase() != 'N/A';
+    final bool hasPiezaB =
+        p2 != null &&
+        p2.nombre.trim().isNotEmpty &&
+        p2.nombre.trim().toUpperCase() != 'N/A';
     final String piezaBNombre = hasPiezaB ? p2.nombre.toUpperCase() : 'N/A';
     final double piezaBValor = hasPiezaB ? p2.costoProduccion : 0.0;
     final double piezaBVenta = hasPiezaB ? p2.costoVenta : 0.0;
-    final String piezaBCategoria = hasPiezaB ? (p2.categoriaNombre ?? p2.ramaNombre ?? 'N/A').toUpperCase() : 'N/A';
-    final String piezaBTecnica = hasPiezaB ? (p2.subcategoriaNombre ?? 'N/A').toUpperCase() : 'N/A';
-    final String piezaBTiempo = hasPiezaB ? _formatearTiempo(p2.tiempoElaboracion, p2.plazoElaboracion) : 'N/A';
+    final String piezaBCategoria = hasPiezaB
+        ? (p2.categoriaNombre ?? p2.ramaNombre ?? 'N/A').toUpperCase()
+        : 'N/A';
+    final String piezaBTecnica = hasPiezaB
+        ? (p2.subcategoriaNombre ?? 'N/A').toUpperCase()
+        : 'N/A';
+    final String piezaBTiempo = hasPiezaB
+        ? _formatearTiempo(p2.tiempoElaboracion, p2.plazoElaboracion)
+        : 'N/A';
 
     // QR Codes
     final String vCardA = _buildVCard(
@@ -276,19 +342,32 @@ class PdfGenerator {
                       children: [
                         pw.Text(
                           'Gobierno del Estado de Michoacán de Ocampo',
-                          style: pw.TextStyle(fontSize: 3.3 * mm, fontWeight: pw.FontWeight.bold, color: _colorBlack),
+                          style: pw.TextStyle(
+                            fontSize: 3.3 * mm,
+                            fontWeight: pw.FontWeight.bold,
+                            color: _colorBlack,
+                          ),
                           textAlign: pw.TextAlign.center,
                         ),
                         pw.SizedBox(height: 2 * mm),
                         pw.RichText(
                           textAlign: pw.TextAlign.center,
                           text: pw.TextSpan(
-                            style: pw.TextStyle(fontSize: 2.7 * mm, color: _colorBlack, lineSpacing: 1.2),
+                            style: pw.TextStyle(
+                              fontSize: 2.7 * mm,
+                              color: _colorBlack,
+                              lineSpacing: 1.2,
+                            ),
                             children: [
-                              const pw.TextSpan(text: 'Casa de las Artesanías de Michoacán de Ocampo\n'),
+                              const pw.TextSpan(
+                                text:
+                                    'Casa de las Artesanías de Michoacán de Ocampo\n',
+                              ),
                               pw.TextSpan(
                                 text: nombreDelConcurso,
-                                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                                style: pw.TextStyle(
+                                  fontWeight: pw.FontWeight.bold,
+                                ),
                               ),
                             ],
                           ),
@@ -296,7 +375,11 @@ class PdfGenerator {
                         pw.SizedBox(height: 3 * mm),
                         pw.Text(
                           'Certificado de Participación a nombre de:',
-                          style: pw.TextStyle(fontSize: 3.0 * mm, fontWeight: pw.FontWeight.bold, color: _colorBlack),
+                          style: pw.TextStyle(
+                            fontSize: 3.0 * mm,
+                            fontWeight: pw.FontWeight.bold,
+                            color: _colorBlack,
+                          ),
                           textAlign: pw.TextAlign.center,
                         ),
                         pw.SizedBox(height: 3 * mm),
@@ -309,10 +392,15 @@ class PdfGenerator {
                             pw.TableRow(
                               children: [
                                 pw.Padding(
-                                  padding: const pw.EdgeInsets.only(right: 3 * mm),
+                                  padding: const pw.EdgeInsets.only(
+                                    right: 3 * mm,
+                                  ),
                                   child: pw.Text(
                                     'Artesano:',
-                                    style: pw.TextStyle(fontSize: 2.7 * mm, color: _colorBlack),
+                                    style: pw.TextStyle(
+                                      fontSize: 2.7 * mm,
+                                      color: _colorBlack,
+                                    ),
                                     textAlign: pw.TextAlign.right,
                                   ),
                                 ),
@@ -330,10 +418,15 @@ class PdfGenerator {
                             pw.TableRow(
                               children: [
                                 pw.Padding(
-                                  padding: const pw.EdgeInsets.only(right: 3 * mm),
+                                  padding: const pw.EdgeInsets.only(
+                                    right: 3 * mm,
+                                  ),
                                   child: pw.Text(
                                     'de la localidad:',
-                                    style: pw.TextStyle(fontSize: 2.7 * mm, color: _colorBlack),
+                                    style: pw.TextStyle(
+                                      fontSize: 2.7 * mm,
+                                      color: _colorBlack,
+                                    ),
                                     textAlign: pw.TextAlign.right,
                                   ),
                                 ),
@@ -365,7 +458,10 @@ class PdfGenerator {
                       color: _colorCardBg,
                       borderRadius: pw.BorderRadius.circular(3 * mm),
                     ),
-                    padding: const pw.EdgeInsets.symmetric(vertical: 1.5 * mm, horizontal: 3 * mm),
+                    padding: const pw.EdgeInsets.symmetric(
+                      vertical: 1.5 * mm,
+                      horizontal: 3 * mm,
+                    ),
                     child: pw.Text(
                       'Participando con las(s) siguientes(s) piezas(s)',
                       style: pw.TextStyle(
@@ -517,10 +613,16 @@ class PdfGenerator {
                       color: _colorCardBg,
                       borderRadius: pw.BorderRadius.circular(3 * mm),
                     ),
-                    padding: const pw.EdgeInsets.symmetric(vertical: 1.5 * mm, horizontal: 3 * mm),
+                    padding: const pw.EdgeInsets.symmetric(
+                      vertical: 1.5 * mm,
+                      horizontal: 3 * mm,
+                    ),
                     child: pw.RichText(
                       text: pw.TextSpan(
-                        style: pw.TextStyle(fontSize: 2.7 * mm, color: _colorBlack),
+                        style: pw.TextStyle(
+                          fontSize: 2.7 * mm,
+                          color: _colorBlack,
+                        ),
                         children: [
                           pw.TextSpan(
                             text: 'FOLIO DEL CERTIFICADO No: ',
@@ -569,7 +671,10 @@ class PdfGenerator {
                               children: [
                                 pw.TextSpan(
                                   text: 'Folio ',
-                                  style: pw.TextStyle(fontSize: 2.5 * mm, color: _colorMutedGrey),
+                                  style: pw.TextStyle(
+                                    fontSize: 2.5 * mm,
+                                    color: _colorMutedGrey,
+                                  ),
                                 ),
                                 pw.TextSpan(
                                   text: folio,
@@ -590,29 +695,34 @@ class PdfGenerator {
                           },
                           children: [
                             _buildDetailRow('Artesano:', artesanoNombre),
-                            _buildDetailRow('de la localidad de:', artesanoLocalidad),
+                            _buildDetailRow(
+                              'de la localidad de:',
+                              artesanoLocalidad,
+                            ),
                             _buildDetailRow('Teléfono:', artesanoTelefono),
-                            _buildDetailRow('Pieza (A):', piezaANombre, paddingTop: 1 * mm),
+                            _buildDetailRow(
+                              'Pieza (A):',
+                              piezaANombre,
+                              paddingTop: 1 * mm,
+                            ),
                             _buildDetailRow('Categoria:', piezaACategoria),
                             _buildDetailRow('Tiempo de Elab.:', piezaATiempo),
-                            _buildCostRow('Costo: \$${numberFormat.format(piezaAValor)}'),
+                            _buildCostRow(
+                              'Costo: \$${numberFormat.format(piezaAValor)}',
+                            ),
                             if (hasPiezaB) ...[
-                              _buildDetailRow('Pieza (B):', piezaBNombre, paddingTop: 1 * mm),
+                              _buildDetailRow(
+                                'Pieza (B):',
+                                piezaBNombre,
+                                paddingTop: 1 * mm,
+                              ),
                               _buildDetailRow('Categoria:', piezaBCategoria),
                               _buildDetailRow('Tiempo de Elab.:', piezaBTiempo),
-                              _buildCostRow('Costo: \$${numberFormat.format(piezaBValor)}'),
+                              _buildCostRow(
+                                'Costo: \$${numberFormat.format(piezaBValor)}',
+                              ),
                             ],
                           ],
-                        ),
-                        pw.SizedBox(height: 4 * mm),
-                        pw.Text(
-                          nombreDelConcurso,
-                          style: pw.TextStyle(
-                            fontSize: 1.3 * mm,
-                            fontWeight: pw.FontWeight.bold,
-                            color: _colorBlack,
-                          ),
-                          textAlign: pw.TextAlign.center,
                         ),
                       ],
                     ),
@@ -633,7 +743,8 @@ class PdfGenerator {
                           height: 6 * mm,
                           margin: const pw.EdgeInsets.only(bottom: 2 * mm),
                           child: pw.Row(
-                            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                            mainAxisAlignment:
+                                pw.MainAxisAlignment.spaceBetween,
                             children: [
                               if (fonartImage != null)
                                 pw.Image(fonartImage, height: 6 * mm)
@@ -652,7 +763,10 @@ class PdfGenerator {
                           margin: const pw.EdgeInsets.only(bottom: 2 * mm),
                           child: pw.RichText(
                             text: pw.TextSpan(
-                              style: pw.TextStyle(fontSize: 2.7 * mm, color: _colorBlack),
+                              style: pw.TextStyle(
+                                fontSize: 2.7 * mm,
+                                color: _colorBlack,
+                              ),
                               children: [
                                 const pw.TextSpan(text: 'Folio: '),
                                 pw.TextSpan(
@@ -672,7 +786,11 @@ class PdfGenerator {
                           margin: const pw.EdgeInsets.only(bottom: 2 * mm),
                           child: pw.RichText(
                             text: pw.TextSpan(
-                              style: pw.TextStyle(fontSize: 2.7 * mm, fontWeight: pw.FontWeight.bold, color: _colorBlack),
+                              style: pw.TextStyle(
+                                fontSize: 2.7 * mm,
+                                fontWeight: pw.FontWeight.bold,
+                                color: _colorBlack,
+                              ),
                               children: [
                                 const pw.TextSpan(text: 'Pieza (A): '),
                                 pw.TextSpan(text: piezaANombre),
@@ -706,12 +824,21 @@ class PdfGenerator {
                                     1: pw.FlexColumnWidth(),
                                   },
                                   children: [
-                                    _buildLabelRow('Venta:', '\$${numberFormat.format(piezaAVenta)}'),
-                                    _buildLabelRow('Localidad:', artesanoLocalidad),
+                                    _buildLabelRow(
+                                      'Venta:',
+                                      '\$${numberFormat.format(piezaAVenta)}',
+                                    ),
+                                    _buildLabelRow(
+                                      'Localidad:',
+                                      artesanoLocalidad,
+                                    ),
                                     pw.TableRow(
                                       children: [
                                         pw.Padding(
-                                          padding: const pw.EdgeInsets.symmetric(vertical: 0.5 * mm),
+                                          padding:
+                                              const pw.EdgeInsets.symmetric(
+                                                vertical: 0.5 * mm,
+                                              ),
                                           child: pw.Text(
                                             'Técnica:',
                                             style: pw.TextStyle(
@@ -723,18 +850,32 @@ class PdfGenerator {
                                           ),
                                         ),
                                         pw.Padding(
-                                          padding: const pw.EdgeInsets.only(left: 2 * mm, top: 0.5 * mm, bottom: 0.5 * mm),
+                                          padding: const pw.EdgeInsets.only(
+                                            left: 2 * mm,
+                                            top: 0.5 * mm,
+                                            bottom: 0.5 * mm,
+                                          ),
                                           child: pw.RichText(
                                             text: pw.TextSpan(
-                                              style: pw.TextStyle(fontSize: 2.3 * mm, color: _colorBlack, lineSpacing: 1.1),
+                                              style: pw.TextStyle(
+                                                fontSize: 2.3 * mm,
+                                                color: _colorBlack,
+                                                lineSpacing: 1.1,
+                                              ),
                                               children: [
                                                 pw.TextSpan(
                                                   text: '$piezaACategoria\n',
-                                                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                                                  style: pw.TextStyle(
+                                                    fontWeight:
+                                                        pw.FontWeight.bold,
+                                                  ),
                                                 ),
                                                 pw.TextSpan(
                                                   text: piezaATecnica,
-                                                  style: pw.TextStyle(fontWeight: pw.FontWeight.normal),
+                                                  style: pw.TextStyle(
+                                                    fontWeight:
+                                                        pw.FontWeight.normal,
+                                                  ),
                                                 ),
                                               ],
                                             ),
@@ -742,12 +883,26 @@ class PdfGenerator {
                                         ),
                                       ],
                                     ),
-                                    _buildLabelRow('Tiempo de Elaboración:', piezaATiempo, paddingTop: 1 * mm),
+                                    _buildLabelRow(
+                                      'Tiempo de Elaboración:',
+                                      piezaATiempo,
+                                      paddingTop: 1 * mm,
+                                    ),
                                   ],
                                 ),
                               ),
                             ],
                           ),
+                        ),
+                        pw.SizedBox(height: 2 * mm),
+                        pw.Text(
+                          nombreDelConcurso,
+                          style: pw.TextStyle(
+                            fontSize: 1.6 * mm,
+                            fontWeight: pw.FontWeight.bold,
+                            color: _colorBlack,
+                          ),
+                          textAlign: pw.TextAlign.center,
                         ),
                       ],
                     ),
@@ -769,7 +924,8 @@ class PdfGenerator {
                             height: 6 * mm,
                             margin: const pw.EdgeInsets.only(bottom: 2 * mm),
                             child: pw.Row(
-                              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment:
+                                  pw.MainAxisAlignment.spaceBetween,
                               children: [
                                 if (fonartImage != null)
                                   pw.Image(fonartImage, height: 6 * mm)
@@ -788,7 +944,10 @@ class PdfGenerator {
                             margin: const pw.EdgeInsets.only(bottom: 2 * mm),
                             child: pw.RichText(
                               text: pw.TextSpan(
-                                style: pw.TextStyle(fontSize: 2.7 * mm, color: _colorBlack),
+                                style: pw.TextStyle(
+                                  fontSize: 2.7 * mm,
+                                  color: _colorBlack,
+                                ),
                                 children: [
                                   const pw.TextSpan(text: 'Folio: '),
                                   pw.TextSpan(
@@ -808,7 +967,11 @@ class PdfGenerator {
                             margin: const pw.EdgeInsets.only(bottom: 2 * mm),
                             child: pw.RichText(
                               text: pw.TextSpan(
-                                style: pw.TextStyle(fontSize: 2.7 * mm, fontWeight: pw.FontWeight.bold, color: _colorBlack),
+                                style: pw.TextStyle(
+                                  fontSize: 2.7 * mm,
+                                  fontWeight: pw.FontWeight.bold,
+                                  color: _colorBlack,
+                                ),
                                 children: [
                                   const pw.TextSpan(text: 'Pieza (B): '),
                                   pw.TextSpan(text: piezaBNombre),
@@ -842,12 +1005,21 @@ class PdfGenerator {
                                       1: pw.FlexColumnWidth(),
                                     },
                                     children: [
-                                      _buildLabelRow('Venta:', '\$${numberFormat.format(piezaBVenta)}'),
-                                      _buildLabelRow('Localidad:', artesanoLocalidad),
+                                      _buildLabelRow(
+                                        'Venta:',
+                                        '\$${numberFormat.format(piezaBVenta)}',
+                                      ),
+                                      _buildLabelRow(
+                                        'Localidad:',
+                                        artesanoLocalidad,
+                                      ),
                                       pw.TableRow(
                                         children: [
                                           pw.Padding(
-                                            padding: const pw.EdgeInsets.symmetric(vertical: 0.5 * mm),
+                                            padding:
+                                                const pw.EdgeInsets.symmetric(
+                                                  vertical: 0.5 * mm,
+                                                ),
                                             child: pw.Text(
                                               'Técnica:',
                                               style: pw.TextStyle(
@@ -859,18 +1031,32 @@ class PdfGenerator {
                                             ),
                                           ),
                                           pw.Padding(
-                                            padding: const pw.EdgeInsets.only(left: 2 * mm, top: 0.5 * mm, bottom: 0.5 * mm),
+                                            padding: const pw.EdgeInsets.only(
+                                              left: 2 * mm,
+                                              top: 0.5 * mm,
+                                              bottom: 0.5 * mm,
+                                            ),
                                             child: pw.RichText(
                                               text: pw.TextSpan(
-                                                style: pw.TextStyle(fontSize: 2.3 * mm, color: _colorBlack, lineSpacing: 1.1),
+                                                style: pw.TextStyle(
+                                                  fontSize: 2.3 * mm,
+                                                  color: _colorBlack,
+                                                  lineSpacing: 1.1,
+                                                ),
                                                 children: [
                                                   pw.TextSpan(
                                                     text: '$piezaBCategoria\n',
-                                                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                                                    style: pw.TextStyle(
+                                                      fontWeight:
+                                                          pw.FontWeight.bold,
+                                                    ),
                                                   ),
                                                   pw.TextSpan(
                                                     text: piezaBTecnica,
-                                                    style: pw.TextStyle(fontWeight: pw.FontWeight.normal),
+                                                    style: pw.TextStyle(
+                                                      fontWeight:
+                                                          pw.FontWeight.normal,
+                                                    ),
                                                   ),
                                                 ],
                                               ),
@@ -878,12 +1064,26 @@ class PdfGenerator {
                                           ),
                                         ],
                                       ),
-                                      _buildLabelRow('Tiempo de Elaboración:', piezaBTiempo, paddingTop: 1 * mm),
+                                      _buildLabelRow(
+                                        'Tiempo de Elaboración:',
+                                        piezaBTiempo,
+                                        paddingTop: 1 * mm,
+                                      ),
                                     ],
                                   ),
                                 ),
                               ],
                             ),
+                          ),
+                          pw.SizedBox(height: 2 * mm),
+                          pw.Text(
+                            nombreDelConcurso,
+                            style: pw.TextStyle(
+                              fontSize: 1.6 * mm,
+                              fontWeight: pw.FontWeight.bold,
+                              color: _colorBlack,
+                            ),
+                            textAlign: pw.TextAlign.center,
                           ),
                         ],
                       ),
@@ -900,11 +1100,18 @@ class PdfGenerator {
   }
 
   /// Fila de la tabla de detalles superior derecha
-  static pw.TableRow _buildDetailRow(String label, String value, {double paddingTop = 0}) {
+  static pw.TableRow _buildDetailRow(
+    String label,
+    String value, {
+    double paddingTop = 0,
+  }) {
     return pw.TableRow(
       children: [
         pw.Padding(
-          padding: pw.EdgeInsets.only(top: paddingTop + 0.5 * mm, bottom: 0.5 * mm),
+          padding: pw.EdgeInsets.only(
+            top: paddingTop + 0.5 * mm,
+            bottom: 0.5 * mm,
+          ),
           child: pw.Text(
             label,
             style: pw.TextStyle(
@@ -916,7 +1123,11 @@ class PdfGenerator {
           ),
         ),
         pw.Padding(
-          padding: pw.EdgeInsets.only(left: 3 * mm, top: paddingTop + 0.5 * mm, bottom: 0.5 * mm),
+          padding: pw.EdgeInsets.only(
+            left: 3 * mm,
+            top: paddingTop + 0.5 * mm,
+            bottom: 0.5 * mm,
+          ),
           child: pw.Text(
             value,
             style: pw.TextStyle(
@@ -952,11 +1163,18 @@ class PdfGenerator {
   }
 
   /// Fila de tabla para las etiquetas de piezas
-  static pw.TableRow _buildLabelRow(String label, String value, {double paddingTop = 0}) {
+  static pw.TableRow _buildLabelRow(
+    String label,
+    String value, {
+    double paddingTop = 0,
+  }) {
     return pw.TableRow(
       children: [
         pw.Padding(
-          padding: pw.EdgeInsets.only(top: paddingTop + 0.5 * mm, bottom: 0.5 * mm),
+          padding: pw.EdgeInsets.only(
+            top: paddingTop + 0.5 * mm,
+            bottom: 0.5 * mm,
+          ),
           child: pw.Text(
             label,
             style: pw.TextStyle(
@@ -968,7 +1186,11 @@ class PdfGenerator {
           ),
         ),
         pw.Padding(
-          padding: pw.EdgeInsets.only(left: 2 * mm, top: paddingTop + 0.5 * mm, bottom: 0.5 * mm),
+          padding: pw.EdgeInsets.only(
+            left: 2 * mm,
+            top: paddingTop + 0.5 * mm,
+            bottom: 0.5 * mm,
+          ),
           child: pw.Text(
             value,
             style: pw.TextStyle(
@@ -983,8 +1205,14 @@ class PdfGenerator {
   }
 
   /// Envía a imprimir directamente o abre el visor nativo de impresión
-  static Future<void> printComprobante(RegistroConcurso registro) async {
-    final pdfBytes = await generateComprobanteInscripcion(registro);
+  static Future<void> printComprobante(
+    RegistroConcurso registro, {
+    Concurso? concurso,
+  }) async {
+    final pdfBytes = await generateComprobanteInscripcion(
+      registro,
+      concurso: concurso,
+    );
     await Printing.layoutPdf(
       onLayout: (PdfPageFormat format) async => pdfBytes,
       name: 'Inscripcion_Concurso_Folio_${registro.folio}.pdf',

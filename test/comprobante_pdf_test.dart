@@ -93,5 +93,63 @@ void main() {
       expect(pdfBytes, isNotNull);
       expect(pdfBytes.length, greaterThan(1000));
     });
+
+    test('resolverNombreConcurso concatena nombre verdadero + ejercicio correctamente', () {
+      // Caso 1: Concurso sin ejercicio en el nombre
+      final c1 = Concurso(
+        id: 10,
+        nombre: 'LIV Concurso Estatal de Artesanías de Domingo de Ramos',
+        ejercicio: '2024',
+        idTipoConcurso: 1,
+      );
+      expect(
+        PdfGenerator.resolverNombreConcurso(c1),
+        equals('LIV CONCURSO ESTATAL DE ARTESANÍAS DE DOMINGO DE RAMOS 2024'),
+      );
+
+      // Caso 2: Concurso que ya contiene el ejercicio al final del nombre (sin duplicar)
+      final c2 = Concurso(
+        id: 11,
+        nombre: 'XXIII Concurso Artesanal de Opopeo 2026',
+        ejercicio: '2026',
+        idTipoConcurso: 1,
+      );
+      expect(
+        PdfGenerator.resolverNombreConcurso(c2),
+        equals('XXIII CONCURSO ARTESANAL DE OPOPEO 2026'),
+      );
+
+      // Caso 3: Concurso nulo (fallback)
+      expect(
+        PdfGenerator.resolverNombreConcurso(null),
+        equals('CONCURSO ESTATAL DE ARTESANÍAS'),
+      );
+    });
+
+    test('generateComprobanteInscripcion acepta concurso explícito con nombre + ejercicio', () async {
+      final registro = RegistroConcurso(
+        id: 3,
+        folio: 3,
+        idArtesano: 1,
+        idConcurso: 99,
+        idArtesania1: 1,
+        artesano: testArtesano,
+        artesania1: testPieza1,
+      );
+
+      final concursoPersonalizado = Concurso(
+        id: 99,
+        nombre: 'Concurso Estatal del Rebozo',
+        ejercicio: '2025',
+        idTipoConcurso: 1,
+      );
+
+      final pdfBytes = await PdfGenerator.generateComprobanteInscripcion(
+        registro,
+        concurso: concursoPersonalizado,
+      );
+      expect(pdfBytes, isNotNull);
+      expect(pdfBytes.length, greaterThan(1000));
+    });
   });
 }

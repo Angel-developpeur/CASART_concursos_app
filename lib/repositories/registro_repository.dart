@@ -351,6 +351,9 @@ class RegistroRepository {
 
     final rows = await db.rawQuery(query, args);
 
+    final concursoRows = await db.query('concurso', where: 'id = ?', whereArgs: [idConcurso]);
+    final concurso = concursoRows.isNotEmpty ? Concurso.fromMap(concursoRows.first) : null;
+
     List<RegistroConcurso> registros = [];
     for (final row in rows) {
       final artesanoId = row['id_artesano'] as int;
@@ -366,6 +369,7 @@ class RegistroRepository {
         artesano: artesano,
         artesania1: pieza1,
         artesania2: pieza2,
+        concurso: concurso,
       ));
     }
 
