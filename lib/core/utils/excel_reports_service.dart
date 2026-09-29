@@ -1185,6 +1185,100 @@ class ExcelReportsService {
     }
   }
 
+  /// Ajusta automáticamente el ancho de las columnas de una hoja de cálculo
+  /// al tamaño del contenido de sus celdas para evitar que los textos o números
+  /// queden cortados u ocultos al visualizar el archivo Excel.
+  /// 
+  /// Ignora celdas que forman parte de combinaciones horizontales (títulos o
+  /// encabezados de sección que abarcan varias columnas) para no distorsionar
+  /// el ancho de columnas individuales (como número progresivo o folios).
+  static void autoFitColumns(
+    Sheet sheet, {
+    double minWidth = 10.0,
+    double maxWidth = 100.0,
+    double padding = 4.0,
+  }) {
+    if (sheet.maxColumns == 0 || sheet.maxRows == 0) return;
+
+    // 1. Identificar celdas que forman parte de combinaciones horizontales (colSpan > 1)
+    final multiColumnMergedCells = <String>{};
+    for (final span in sheet.spannedItems) {
+      final parts = span.split(':');
+      if (parts.length == 2) {
+        final start = CellIndex.indexByString(parts[0]);
+        final end = CellIndex.indexByString(parts[1]);
+        if (start.columnIndex != end.columnIndex) {
+          final minCol = start.columnIndex < end.columnIndex ? start.columnIndex : end.columnIndex;
+          final maxCol = start.columnIndex > end.columnIndex ? start.columnIndex : end.columnIndex;
+          final minRow = start.rowIndex < end.rowIndex ? start.rowIndex : end.rowIndex;
+          final maxRow = start.rowIndex > end.rowIndex ? start.rowIndex : end.rowIndex;
+          for (int r = minRow; r <= maxRow; r++) {
+            for (int c = minCol; c <= maxCol; c++) {
+              multiColumnMergedCells.add('$c,$r');
+            }
+          }
+        }
+      }
+    }
+
+    // 2. Medir longitud máxima de contenido por columna
+    final Map<int, double> maxColWidths = {};
+    final rows = sheet.rows;
+
+    for (int r = 0; r < rows.length; r++) {
+      final row = rows[r];
+      for (int c = 0; c < row.length; c++) {
+        // Ignorar celdas combinadas horizontalmente (como títulos o cintillos)
+        if (multiColumnMergedCells.contains('$c,$r')) continue;
+
+        final cell = row[c];
+        if (cell == null || cell.value == null) continue;
+
+        final val = cell.value;
+        String text = '';
+        if (val is TextCellValue) {
+          text = val.value.toString();
+        } else if (val is FormulaCellValue) {
+          text = val.formula ?? '';
+        } else {
+          text = val.toString();
+        }
+
+        if (text.isEmpty) continue;
+
+        // Si contiene saltos de línea (\n), medimos la línea más larga
+        int maxLineLength = 0;
+        final lines = text.split('\n');
+        for (final line in lines) {
+          final len = line.replaceAll('\r', '').trim().length;
+          if (len > maxLineLength) {
+            maxLineLength = len;
+          }
+        }
+
+        if (maxLineLength > 0) {
+          // El texto en negrita (ej. encabezados) ocupa ~15% más espacio horizontal
+          final isBold = cell.cellStyle?.isBold ?? false;
+          final effectiveLength = isBold ? (maxLineLength * 1.15).ceilToDouble() : maxLineLength.toDouble();
+          final currentMax = maxColWidths[c] ?? 0.0;
+          if (effectiveLength > currentMax) {
+            maxColWidths[c] = effectiveLength;
+          }
+        }
+      }
+    }
+
+    // 3. Aplicar anchos calculados a cada columna
+    final totalColumns = sheet.maxColumns;
+    for (int c = 0; c < totalColumns; c++) {
+      final contentWidth = maxColWidths[c] ?? 0.0;
+      final calculatedWidth = contentWidth > 0
+          ? (contentWidth + padding).clamp(minWidth, maxWidth)
+          : minWidth;
+      sheet.setColumnWidth(c, calculatedWidth);
+    }
+  }
+
   static Future<bool> _guardarArchivoExcel({
     required BuildContext context,
     required Excel excel,
@@ -1192,6 +1286,11 @@ class ExcelReportsService {
     required String dialogTitle,
     required String logDescription,
   }) async {
+    // Auto-adaptar columnas al contenido en todas las hojas del libro
+    for (final sheet in excel.sheets.values) {
+      autoFitColumns(sheet);
+    }
+
     final fileBytes = excel.save();
     if (fileBytes == null) {
       throw Exception('No se pudieron codificar los bytes del archivo Excel.');

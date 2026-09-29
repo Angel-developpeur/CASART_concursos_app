@@ -10,6 +10,7 @@ import '../../providers/database_provider.dart';
 import '../../providers/concursos_provider.dart';
 import '../../models/concurso.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/excel_reports_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/services/update_service.dart';
@@ -336,6 +337,11 @@ class _BackupViewState extends ConsumerState<BackupView> {
           TextCellValue(pr.categoriaNombre ?? 'Global'),
           TextCellValue(pr.subcategoriaNombre ?? 'Todas'),
         ]);
+      }
+
+      // Auto-adaptar columnas al contenido en todas las hojas
+      for (final s in excel.sheets.values) {
+        ExcelReportsService.autoFitColumns(s);
       }
 
       final fileBytes = excel.save();
