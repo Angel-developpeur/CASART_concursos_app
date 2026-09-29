@@ -25,6 +25,8 @@
   2. Compilar la versión final:
     flutter build windows --release
 
+   para ofuscar la app es :  flutter build windows --release --obfuscate --split-debug-info=./debug_symbols
+
   3. Generar el instalador .exe con Inno Setup:
   Abres installer.iss y compilas, lo cual generará:
     build\installer\Instalador_Concursos_CASART.exe
