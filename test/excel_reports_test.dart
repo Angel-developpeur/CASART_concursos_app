@@ -239,5 +239,37 @@ void main() {
       expect(claveA, equals('101A'));
       expect(claveB, equals('101B'));
     });
+
+    test('Verificación de fallback de colonia a localidad en Formato C', () {
+      // Caso 1: colonia null -> fallback a localidad
+      final Map<String, dynamic> rowConColoniaNull = {
+        'localidad': 'San Pedro',
+        'colonia': null,
+      };
+      final colVal1 = rowConColoniaNull['colonia']?.toString().trim() ?? '';
+      final localidad1 = rowConColoniaNull['localidad']?.toString().trim().toUpperCase() ?? '';
+      final coloniaFinal1 = (colVal1.isNotEmpty ? colVal1 : localidad1).toUpperCase();
+      expect(coloniaFinal1, equals('SAN PEDRO'));
+
+      // Caso 2: colonia vacía -> fallback a localidad
+      final Map<String, dynamic> rowConColoniaVacia = {
+        'localidad': 'Opopeo',
+        'colonia': '   ',
+      };
+      final colVal2 = rowConColoniaVacia['colonia']?.toString().trim() ?? '';
+      final localidad2 = rowConColoniaVacia['localidad']?.toString().trim().toUpperCase() ?? '';
+      final coloniaFinal2 = (colVal2.isNotEmpty ? colVal2 : localidad2).toUpperCase();
+      expect(coloniaFinal2, equals('OPOPEO'));
+
+      // Caso 3: colonia con valor -> conserva colonia
+      final Map<String, dynamic> rowConColonia = {
+        'localidad': 'Morelia',
+        'colonia': 'Centro Histórico',
+      };
+      final colVal3 = rowConColonia['colonia']?.toString().trim() ?? '';
+      final localidad3 = rowConColonia['localidad']?.toString().trim().toUpperCase() ?? '';
+      final coloniaFinal3 = (colVal3.isNotEmpty ? colVal3 : localidad3).toUpperCase();
+      expect(coloniaFinal3, equals('CENTRO HISTÓRICO'));
+    });
   });
 }

@@ -813,9 +813,10 @@ class ExcelReportsService {
         final telefono = r['telefono_emergencia']?.toString() ?? '';
         final celular = r['telefono']?.toString() ?? '';
 
-        final municipio = r['municipio']?.toString().toUpperCase() ?? '';
-        final localidad = r['localidad']?.toString().toUpperCase() ?? '';
-        final colonia = r['colonia']?.toString().toUpperCase() ?? '';
+        final municipio = r['municipio']?.toString().trim().toUpperCase() ?? '';
+        final localidad = r['localidad']?.toString().trim().toUpperCase() ?? '';
+        final coloniaRaw = r['colonia']?.toString().trim() ?? '';
+        final colonia = (coloniaRaw.isNotEmpty ? coloniaRaw : localidad).toUpperCase();
         final calleStr = '${r['calle'] ?? ''} ${r['numero_exterior'] ?? ''}'.trim().toUpperCase();
         final cp = r['cp']?.toString() ?? '';
         final etnia = r['etnia_nombre']?.toString() ?? '';
