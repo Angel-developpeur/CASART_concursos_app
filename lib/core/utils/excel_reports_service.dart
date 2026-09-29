@@ -153,7 +153,7 @@ class ExcelReportsService {
             fontSize: 11,
             fontColorHex: _colorTextoOscuro,
             backgroundColorHex: _colorGrisGrupo,
-            horizontalAlign: HorizontalAlign.Left,
+            horizontalAlign: HorizontalAlign.Center,
             verticalAlign: VerticalAlign.Center,
           );
         }
@@ -174,9 +174,11 @@ class ExcelReportsService {
         }
 
         final nombreCompleto = '${p['artesano_nombre'] ?? ''} ${p['artesano_paterno'] ?? ''} ${p['artesano_materno'] ?? ''}'.trim();
-        final procedencia = (p['localidad'] != null && p['localidad'].toString().isNotEmpty)
-            ? p['localidad'].toString()
-            : (p['municipio']?.toString() ?? 'N/A');
+        final localidadRaw = p['localidad']?.toString().trim() ?? '';
+        final municipioRaw = p['municipio']?.toString().trim() ?? '';
+        final procedencia = localidadRaw.isNotEmpty
+            ? localidadRaw
+            : (municipioRaw.isNotEmpty ? municipioRaw : 'N/A');
 
         final etnia = (p['etnia_nombre'] != null &&
                 p['etnia_nombre'].toString().isNotEmpty &&
@@ -234,19 +236,60 @@ class ExcelReportsService {
 
       // 4.3 Premios Comunes (id_tipo_premio = 3) agrupados por Categoría y Subcategoría
       final comunes = premiaciones.where((p) => p['id_tipo_premio'] == 3).toList();
+      int catCounter = 0;
 
       for (final cat in categoriasRows) {
         final catId = cat['id'] as int;
-        final catNombre = cat['nombre']?.toString() ?? 'Categoría';
+        final rawCatNombre = cat['nombre']?.toString().trim() ?? 'Categoría';
+        final catNombre = rawCatNombre.replaceFirst(RegExp(r'^[A-Za-z]\.\s*'), '');
 
         final catSubs = subcategoriasRows.where((s) => s['id_categoria'] == catId).toList();
 
+        // Verificar si la categoría tiene ganadores antes de asignarle letra
+        bool hasWinners = false;
         if (catSubs.isNotEmpty) {
           final subIds = catSubs.map((s) => s['id'] as int).toList();
+          for (final sub in catSubs) {
+            final subId = sub['id'] as int;
+            final subWinners = comunes.where((p) {
+              final pCatId = p['premio_id_categoria'] ?? p['id_categoria_concurso'];
+              final pSubCatId = p['premio_id_sub_categoria'] ?? p['id_sub_categoria_concurso'];
+              return (pCatId == catId || pCatId == null) && pSubCatId == subId;
+            }).toList();
+            if (subWinners.isNotEmpty) {
+              hasWinners = true;
+              break;
+            }
+          }
+          if (!hasWinners) {
+            final directWinners = comunes.where((p) {
+              final pCatId = p['premio_id_categoria'] ?? p['id_categoria_concurso'];
+              final pSubCatId = p['premio_id_sub_categoria'] ?? p['id_sub_categoria_concurso'];
+              return pCatId == catId && (pSubCatId == null || !subIds.contains(pSubCatId));
+            }).toList();
+            if (directWinners.isNotEmpty) hasWinners = true;
+          }
+        } else {
+          final catWinners = comunes.where((p) {
+            final pCatId = p['premio_id_categoria'] ?? p['id_categoria_concurso'];
+            return pCatId == catId;
+          }).toList();
+          if (catWinners.isNotEmpty) hasWinners = true;
+        }
+
+        if (!hasWinners) continue;
+
+        final catLetter = _categoryLetter(catCounter++);
+        final catLetterLower = catLetter.toLowerCase();
+
+        if (catSubs.isNotEmpty) {
+          final subIds = catSubs.map((s) => s['id'] as int).toList();
+          int subCounter = 1;
 
           for (final sub in catSubs) {
             final subId = sub['id'] as int;
-            final subNombre = sub['nombre']?.toString() ?? 'Subcategoría';
+            final rawSubNombre = sub['nombre']?.toString().trim() ?? 'Subcategoría';
+            final subNombre = rawSubNombre.replaceFirst(RegExp(r'^[a-z]\.\d+\s*'), '');
 
             final subWinners = comunes.where((p) {
               final pCatId = p['premio_id_categoria'] ?? p['id_categoria_concurso'];
@@ -255,10 +298,12 @@ class ExcelReportsService {
             }).toList();
 
             if (subWinners.isNotEmpty) {
-              addGroupHeader('$catNombre  $subNombre'.toUpperCase());
+              final subCode = '$catLetterLower.$subCounter';
+              addGroupHeader('$catLetter. ${catNombre.toUpperCase()} $subCode ${subNombre.toUpperCase()}');
               for (final p in subWinners) {
                 addWinnerRow(p);
               }
+              subCounter++;
             }
           }
 
@@ -270,7 +315,7 @@ class ExcelReportsService {
           }).toList();
 
           if (directWinners.isNotEmpty) {
-            addGroupHeader(catNombre.toUpperCase());
+            addGroupHeader('$catLetter. ${catNombre.toUpperCase()}');
             for (final p in directWinners) {
               addWinnerRow(p);
             }
@@ -283,7 +328,7 @@ class ExcelReportsService {
           }).toList();
 
           if (catWinners.isNotEmpty) {
-            addGroupHeader(catNombre.toUpperCase());
+            addGroupHeader('$catLetter. ${catNombre.toUpperCase()}');
             for (final p in catWinners) {
               addWinnerRow(p);
             }
@@ -561,7 +606,9 @@ class ExcelReportsService {
         // Domicilio
         final calle = p['calle']?.toString().trim() ?? '';
         final numExt = p['numero_exterior']?.toString().trim() ?? '';
-        final colonia = p['colonia']?.toString().trim() ?? '';
+        final coloniaRaw = p['colonia']?.toString().trim() ?? '';
+        final localidadRaw = p['localidad']?.toString().trim() ?? '';
+        final colonia = (coloniaRaw.isNotEmpty ? coloniaRaw : localidadRaw).toUpperCase();
         final domParts = [
           if (calle.isNotEmpty) 'C $calle',
           if (numExt.isNotEmpty) '#$numExt' else 'S/N',
@@ -1110,6 +1157,17 @@ class ExcelReportsService {
 
   static String _sanitizeName(String name) {
     return name.replaceAll(RegExp(r'[^\w\s-]'), '').trim().replaceAll(RegExp(r'\s+'), '_');
+  }
+
+  static String _categoryLetter(int index) {
+    if (index < 0) return 'A';
+    String result = '';
+    int n = index;
+    while (n >= 0) {
+      result = String.fromCharCode((n % 26) + 65) + result;
+      n = (n ~/ 26) - 1;
+    }
+    return result;
   }
 
   static String _formatEscolaridad(dynamic nivel) {

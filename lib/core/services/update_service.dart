@@ -32,7 +32,7 @@ class UpdateInfo {
 class UpdateService {
   static const String owner = 'Angel-developpeur';
   static const String repo = 'CASART_concursos_app';
-  static const String currentVersion = '1.0.1';
+  static const String currentVersion = '1.0.2';
 
   /// Consulta la API pública de GitHub Releases para comprobar si hay una versión superior
   static Future<UpdateInfo> checkForUpdate() async {

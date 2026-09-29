@@ -271,5 +271,30 @@ void main() {
       final coloniaFinal3 = (colVal3.isNotEmpty ? colVal3 : localidad3).toUpperCase();
       expect(coloniaFinal3, equals('CENTRO HISTÓRICO'));
     });
+
+    test('Verificación de formato de enumeración de categorías y subcategorías en Formato A', () {
+      // Función lógica de formateo
+      String formatCatSub(String catLetter, String catNombre, {int? subIndex, String? subNombre}) {
+        final catClean = catNombre.trim().replaceFirst(RegExp(r'^[A-Za-z]\.\s*'), '').toUpperCase();
+        if (subIndex != null && subNombre != null && subNombre.trim().isNotEmpty) {
+          final subClean = subNombre.trim().replaceFirst(RegExp(r'^[a-z]\.\d+\s*'), '').toUpperCase();
+          final subCode = '${catLetter.toLowerCase()}.$subIndex';
+          return '$catLetter. $catClean $subCode $subClean';
+        }
+        return '$catLetter. $catClean';
+      }
+
+      // Caso ejemplo del usuario:
+      final res1 = formatCatSub('A', 'ALFARERIA BRUNIDA Y / O VIDRIADA', subIndex: 1, subNombre: 'JUEGOS DE TE Y AGUA');
+      expect(res1, equals('A. ALFARERIA BRUNIDA Y / O VIDRIADA a.1 JUEGOS DE TE Y AGUA'));
+
+      // Caso subcategoría 2:
+      final res2 = formatCatSub('A', 'ALFARERIA BRUNIDA Y / O VIDRIADA', subIndex: 2, subNombre: 'MINIATURAS');
+      expect(res2, equals('A. ALFARERIA BRUNIDA Y / O VIDRIADA a.2 MINIATURAS'));
+
+      // Caso categoría B sin subcategoría:
+      final res3 = formatCatSub('B', 'SILLAS');
+      expect(res3, equals('B. SILLAS'));
+    });
   });
 }
