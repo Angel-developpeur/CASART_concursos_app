@@ -295,7 +295,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                 // TOP BAR: CONCURSO ACTIVO Y RED MULTIEQUIPO
                 Container(
                   height: 60,
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     border: Border(
@@ -309,215 +309,292 @@ class _AppShellState extends ConsumerState<AppShell> {
                       ),
                     ],
                   ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: selectedConcursoAsync.when(
-                          loading: () =>
-                              const Text('Cargando concurso seleccionado...'),
-                          error: (_, _) => const SizedBox.shrink(),
-                          data: (concurso) {
-                            if (concurso == null) {
-                              return Align(
-                                alignment: Alignment.centerLeft,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange.shade50,
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(
-                                      color: Colors.orange.shade200,
-                                    ),
-                                  ),
-                                  child: const Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.info_outline,
-                                        color: Colors.orange,
-                                        size: 16,
-                                      ),
-                                      SizedBox(width: 8),
-                                      Flexible(
-                                        child: Text(
-                                          'Ningún concurso activo. Selecciona uno en "Concursos".',
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            color: Colors.orange,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            }
+                  child: LayoutBuilder(
+                    builder: (context, topBarConstraints) {
+                      final isCompact = topBarConstraints.maxWidth < 720;
+                      final isUltraCompact = topBarConstraints.maxWidth < 540;
 
-                            return Align(
-                              alignment: Alignment.centerLeft,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.ocreAccentLight,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: AppTheme.ocreAccentBorder,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.emoji_events,
-                                      color: AppTheme.ocreAccent,
-                                      size: 18,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Flexible(
-                                      child: Text(
-                                        'Concurso Activo: ${concurso.nombre} (${concurso.ejercicio})',
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: AppTheme.ocreText,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ),
-                                    if (concurso.lugar != null &&
-                                        concurso.lugar!.isNotEmpty) ...[
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        '• ${concurso.lugar}',
-                                        style: const TextStyle(
-                                          color: AppTheme.ocreText,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                    const SizedBox(width: 8),
-                                    Container(
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: selectedConcursoAsync.when(
+                              loading: () =>
+                                  const Text('Cargando concurso seleccionado...'),
+                              error: (_, _) => const SizedBox.shrink(),
+                              data: (concurso) {
+                                if (concurso == null) {
+                                  return Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Container(
                                       padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
+                                        horizontal: 10,
+                                        vertical: 6,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: concurso.finalizado
-                                            ? Colors.blueGrey.shade100
-                                            : AppTheme.verdeLight,
-                                        borderRadius: BorderRadius.circular(4),
+                                        color: Colors.orange.shade50,
+                                        borderRadius: BorderRadius.circular(6),
                                         border: Border.all(
-                                          color: concurso.finalizado
-                                              ? Colors.blueGrey.shade300
-                                              : AppTheme.verdeBorder,
+                                          color: Colors.orange.shade200,
                                         ),
                                       ),
-                                      child: Text(
-                                        concurso.finalizado
-                                            ? 'FINALIZADO'
-                                            : 'EN PROCESO',
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          color: concurso.finalizado
-                                              ? Colors.blueGrey.shade800
-                                              : AppTheme.verdeSuccess,
-                                        ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.info_outline,
+                                            color: Colors.orange,
+                                            size: 16,
+                                          ),
+                                          SizedBox(width: 6),
+                                          Flexible(
+                                            child: Text(
+                                              'Ningún concurso activo.',
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                color: Colors.orange,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                  ],
+                                  );
+                                }
+
+                                return Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.ocreAccentLight,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: AppTheme.ocreAccentBorder,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.emoji_events,
+                                          color: AppTheme.ocreAccent,
+                                          size: 18,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Flexible(
+                                          child: Text(
+                                            isUltraCompact
+                                                ? concurso.nombre
+                                                : 'Concurso Activo: ${concurso.nombre} (${concurso.ejercicio})',
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              color: AppTheme.ocreText,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12.5,
+                                            ),
+                                          ),
+                                        ),
+                                        if (!isCompact &&
+                                            concurso.lugar != null &&
+                                            concurso.lugar!.isNotEmpty) ...[
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            '• ${concurso.lugar}',
+                                            style: const TextStyle(
+                                              color: AppTheme.ocreText,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                        if (!isUltraCompact) ...[
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: concurso.finalizado
+                                                  ? Colors.blueGrey.shade100
+                                                  : AppTheme.verdeLight,
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                              border: Border.all(
+                                                color: concurso.finalizado
+                                                    ? Colors.blueGrey.shade300
+                                                    : AppTheme.verdeBorder,
+                                              ),
+                                            ),
+                                            child: Text(
+                                              concurso.finalizado
+                                                  ? 'FINALIZADO'
+                                                  : 'EN PROCESO',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: concurso.finalizado
+                                                    ? Colors.blueGrey.shade800
+                                                    : AppTheme.verdeSuccess,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+
+                          // ACCIONES SUPERIORES EN FILA COMPACTA
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // BOTÓN ESTADO DE RED MULTIEQUIPO (INDICADOR DE IP)
+                              if (isUltraCompact)
+                                IconButton(
+                                  icon: Icon(
+                                    netConfig.isServer ? Icons.hub : Icons.link,
+                                    size: 20,
+                                    color: AppTheme.azulAccent,
+                                  ),
+                                  tooltip: netConfig.isServer
+                                      ? 'Servidor Local (IP: ${netConfig.localIps.isNotEmpty ? netConfig.localIps.first : '0.0.0.0'})'
+                                      : 'Terminal -> ${netConfig.serverHost}',
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (ctx) =>
+                                          const NetworkConfigDialog(),
+                                    );
+                                  },
+                                )
+                              else
+                                OutlinedButton.icon(
+                                  icon: Icon(
+                                    netConfig.isServer ? Icons.hub : Icons.link,
+                                    size: 16,
+                                    color: AppTheme.azulAccent,
+                                  ),
+                                  label: Text(
+                                    isCompact
+                                        ? (netConfig.isServer
+                                            ? 'IP: ${netConfig.localIps.isNotEmpty ? netConfig.localIps.first : '0.0.0.0'}'
+                                            : 'Terminal')
+                                        : (netConfig.isServer
+                                            ? 'Servidor Local (IP: ${netConfig.localIps.isNotEmpty ? netConfig.localIps.first : '0.0.0.0'})'
+                                            : 'Terminal -> ${netConfig.serverHost}'),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.azulAccent,
+                                    ),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 8,
+                                    ),
+                                    side: const BorderSide(
+                                      color: AppTheme.azulBorder,
+                                    ),
+                                    backgroundColor: AppTheme.azulLight,
+                                  ),
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (ctx) =>
+                                          const NetworkConfigDialog(),
+                                    );
+                                  },
                                 ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 16),
 
-                      // BOTÓN ESTADO DE RED MULTIEQUIPO (INDICADOR DE IP)
-                      OutlinedButton.icon(
-                        icon: Icon(
-                          netConfig.isServer ? Icons.hub : Icons.link,
-                          size: 16,
-                          color: AppTheme.azulAccent,
-                        ),
-                        label: Text(
-                          netConfig.isServer
-                              ? 'Servidor Local (IP: ${netConfig.localIps.isNotEmpty ? netConfig.localIps.first : '0.0.0.0'})'
-                              : 'Terminal -> ${netConfig.serverHost}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.azulAccent,
+                              const SizedBox(width: 8),
+
+                              // BOTÓN ACCESO DIRECTO A LOGS / BITÁCORA
+                              if (isCompact)
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.receipt_long,
+                                    size: 18,
+                                    color: Colors.blueGrey,
+                                  ),
+                                  tooltip: 'Logs / Bitácora',
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (ctx) =>
+                                          const LogViewerDialog(),
+                                    );
+                                  },
+                                )
+                              else
+                                OutlinedButton.icon(
+                                  icon: const Icon(
+                                    Icons.receipt_long,
+                                    size: 16,
+                                    color: Colors.blueGrey,
+                                  ),
+                                  label: const Text(
+                                    'Logs',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blueGrey,
+                                    ),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 8,
+                                    ),
+                                    side: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (ctx) =>
+                                          const LogViewerDialog(),
+                                    );
+                                  },
+                                ),
+
+                              if (_currentIndex != 0) ...[
+                                const SizedBox(width: 8),
+                                if (isCompact)
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.swap_horiz,
+                                      size: 20,
+                                    ),
+                                    tooltip: 'Cambiar Concurso',
+                                    onPressed: () {
+                                      setState(() => _currentIndex = 0);
+                                    },
+                                  )
+                                else
+                                  TextButton.icon(
+                                    icon: const Icon(Icons.swap_horiz, size: 18),
+                                    label: const Text('Cambiar Concurso'),
+                                    onPressed: () {
+                                      setState(() => _currentIndex = 0);
+                                    },
+                                  ),
+                              ],
+                            ],
                           ),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          side: const BorderSide(color: AppTheme.azulBorder),
-                          backgroundColor: AppTheme.azulLight,
-                        ),
-                        onPressed: () {
-                          showDialog(
-                            context: context,
-                            builder: (ctx) => const NetworkConfigDialog(),
-                          );
-                        },
-                      ),
-
-                      const SizedBox(width: 8),
-
-                      // BOTÓN ACCESO DIRECTO A LOGS / BITÁCORA
-                      OutlinedButton.icon(
-                        icon: const Icon(
-                          Icons.receipt_long,
-                          size: 16,
-                          color: Colors.blueGrey,
-                        ),
-                        label: const Text(
-                          'Logs',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blueGrey,
-                          ),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 8,
-                          ),
-                          side: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        onPressed: () {
-                          showDialog(
-                            context: context,
-                            builder: (ctx) => const LogViewerDialog(),
-                          );
-                        },
-                      ),
-
-                      const SizedBox(width: 12),
-
-                      if (_currentIndex != 0)
-                        TextButton.icon(
-                          icon: const Icon(Icons.swap_horiz, size: 18),
-                          label: const Text('Cambiar Concurso'),
-                          onPressed: () {
-                            setState(() => _currentIndex = 0);
-                          },
-                        ),
-                    ],
+                        ],
+                      );
+                    },
                   ),
                 ),
 

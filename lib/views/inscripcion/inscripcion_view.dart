@@ -2199,7 +2199,11 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.grey.shade300),
                 ),
-                child: Row(
+                child: Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  alignment: WrapAlignment.spaceBetween,
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -2212,6 +2216,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                         border: Border.all(color: AppTheme.casart200),
                       ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           const Icon(
                             Icons.people_alt_outlined,
@@ -2230,7 +2235,6 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                         ],
                       ),
                     ),
-                    const SizedBox(width: 12),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,
@@ -2242,6 +2246,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                         border: Border.all(color: AppTheme.ocreAccentBorder),
                       ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           const Icon(
                             Icons.palette_outlined,
@@ -2260,7 +2265,6 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                         ],
                       ),
                     ),
-                    const Spacer(),
                     Text(
                       'Valor Acumulado en Venta: ${Formatters.formatCurrency(totalVentaSugerida)}',
                       style: const TextStyle(
@@ -2319,59 +2323,54 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                       ),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // CABECERA: FOLIO, ARTESANO Y BOTONES
-                            Row(
+                        child: LayoutBuilder(
+                          builder: (cardCtx, cardConstraints) {
+                            final isCardNarrow = cardConstraints.maxWidth < 620;
+
+                            final folioWidget = Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.red[800],
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '#${r.folio.toString().padLeft(4, '0')}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            );
+
+                            final artesanoInfo = Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red[800],
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    '#${r.folio.toString().padLeft(4, '0')}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
+                                Text(
+                                  a?.nombreCompleto ?? 'Artesano Desconocido',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        a?.nombreCompleto ??
-                                            'Artesano Desconocido',
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'CURP: ${a?.curp ?? 'N/A'}${a?.telefono != null && a!.telefono!.isNotEmpty ? ' • Tel: ${a.telefono}' : ''} • ${a?.localidad ?? ''}, ${a?.municipio ?? ''}',
-                                        style: TextStyle(
-                                          color: Colors.grey.shade700,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
+                                const SizedBox(height: 2),
+                                Text(
+                                  'CURP: ${a?.curp ?? 'N/A'}${a?.telefono != null && a!.telefono!.isNotEmpty ? ' • Tel: ${a.telefono}' : ''} • ${a?.localidad ?? ''}, ${a?.municipio ?? ''}',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade700,
+                                    fontSize: 12,
                                   ),
                                 ),
-                                const SizedBox(width: 8),
+                              ],
+                            );
 
-                                // BOTÓN REIMPRIMIR
+                            final actionsButtons = Wrap(
+                              spacing: 8,
+                              runSpacing: 6,
+                              children: [
                                 ElevatedButton.icon(
                                   icon: const Icon(Icons.print, size: 16),
                                   label: const Text('Reimprimir'),
@@ -2388,17 +2387,13 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                                   onPressed: () {
                                     showDialog(
                                       context: context,
-                                      builder: (c) =>
-                                          ComprobanteDialog(
-                                            registro: r,
-                                            concurso: concurso,
-                                          ),
+                                      builder: (c) => ComprobanteDialog(
+                                        registro: r,
+                                        concurso: concurso,
+                                      ),
                                     );
                                   },
                                 ),
-                                const SizedBox(width: 8),
-
-                                // BOTÓN EDITAR / CORREGIR (o VER CÉDULA si finalizado)
                                 OutlinedButton.icon(
                                   icon: Icon(
                                     concurso.finalizado
@@ -2420,14 +2415,13 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                                   onPressed: () async {
                                     final resultado =
                                         await showDialog<RegistroConcurso>(
-                                          context: context,
-                                          builder: (c) =>
-                                              EditarInscripcionDialog(
-                                                registro: r,
-                                                concurso: concurso,
-                                                isReadOnly: concurso.finalizado,
-                                              ),
-                                        );
+                                      context: context,
+                                      builder: (c) => EditarInscripcionDialog(
+                                        registro: r,
+                                        concurso: concurso,
+                                        isReadOnly: concurso.finalizado,
+                                      ),
+                                    );
 
                                     if (resultado != null && mounted) {
                                       ScaffoldMessenger.of(
@@ -2446,9 +2440,9 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                                                 context: context,
                                                 builder: (c) =>
                                                     ComprobanteDialog(
-                                                      registro: resultado,
-                                                      concurso: concurso,
-                                                    ),
+                                                  registro: resultado,
+                                                  concurso: concurso,
+                                                ),
                                               );
                                             },
                                           ),
@@ -2457,8 +2451,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                                     }
                                   },
                                 ),
-                                if (concurso.finalizado) ...[
-                                  const SizedBox(width: 8),
+                                if (concurso.finalizado)
                                   ElevatedButton.icon(
                                     icon: const Icon(
                                       Icons.emoji_events,
@@ -2489,20 +2482,115 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                                       }
                                     },
                                   ),
-                                ],
                               ],
-                            ),
+                            );
 
-                            const SizedBox(height: 12),
-                            const Divider(height: 1),
-                            const SizedBox(height: 12),
+                            final piece1Widget = Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: Colors.grey.shade200,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Flexible(
+                                        child: Text(
+                                          'Pieza 1 (Principal):',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                            color: AppTheme.casart800,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        Formatters.formatCurrency(
+                                          p1?.costoVenta ?? 0.0,
+                                        ),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                          color: AppTheme.verdeSuccess,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    p1?.nombre ?? 'Sin nombre',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Rama: ${p1?.ramaNombre ?? 'General'} | Cat: ${p1?.categoriaNombre ?? ''}${p1?.subcategoriaNombre != null ? ' - ${p1!.subcategoriaNombre}' : ''}',
+                                    style: TextStyle(
+                                      color: Colors.grey.shade600,
+                                      fontSize: 11,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  if (p1?.premioNombre != null &&
+                                      p1!.premioNombre!.trim().isNotEmpty) ...[
+                                    const SizedBox(height: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.amber.shade100,
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(
+                                          color: Colors.amber.shade600,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.emoji_events,
+                                            size: 14,
+                                            color: Colors.amber.shade900,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Flexible(
+                                            child: Text(
+                                              'Premio: ${p1.premioNombre}',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 11,
+                                                color: Colors.amber.shade900,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            );
 
-                            // DETALLES DE LAS PIEZAS
-                            Row(
-                              children: [
-                                // PIEZA 1
-                                Expanded(
-                                  child: Container(
+                            final hasPiece2 =
+                                p2 != null && p2.nombre.trim().isNotEmpty;
+                            final piece2Widget = hasPiece2
+                                ? Container(
                                     padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
                                       color: Colors.grey.shade50,
@@ -2517,18 +2605,21 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                                       children: [
                                         Row(
                                           children: [
-                                            const Text(
-                                              'Pieza 1 (Principal):',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 12,
-                                                color: AppTheme.casart800,
+                                            const Flexible(
+                                              child: Text(
+                                                'Pieza 2 (Segunda Pieza):',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 12,
+                                                  color: AppTheme.casart800,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
                                               ),
                                             ),
-                                            const Spacer(),
+                                            const SizedBox(width: 8),
                                             Text(
                                               Formatters.formatCurrency(
-                                                p1?.costoVenta ?? 0.0,
+                                                p2.costoVenta,
                                               ),
                                               style: const TextStyle(
                                                 fontWeight: FontWeight.bold,
@@ -2540,7 +2631,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          p1?.nombre ?? 'Sin nombre',
+                                          p2.nombre,
                                           style: const TextStyle(
                                             fontWeight: FontWeight.w600,
                                             fontSize: 13,
@@ -2550,7 +2641,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
-                                          'Rama: ${p1?.ramaNombre ?? 'General'} | Cat: ${p1?.categoriaNombre ?? ''}${p1?.subcategoriaNombre != null ? ' - ${p1!.subcategoriaNombre}' : ''}',
+                                          'Rama: ${p2.ramaNombre ?? 'General'} | Cat: ${p2.categoriaNombre ?? ''}${p2.subcategoriaNombre != null ? ' - ${p2.subcategoriaNombre}' : ''}',
                                           style: TextStyle(
                                             color: Colors.grey.shade600,
                                             fontSize: 11,
@@ -2558,8 +2649,8 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
-                                        if (p1?.premioNombre != null &&
-                                            p1!.premioNombre!.trim().isNotEmpty) ...[
+                                        if (p2.premioNombre != null &&
+                                            p2.premioNombre!.trim().isNotEmpty) ...[
                                           const SizedBox(height: 6),
                                           Container(
                                             padding: const EdgeInsets.symmetric(
@@ -2568,7 +2659,8 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                                             ),
                                             decoration: BoxDecoration(
                                               color: Colors.amber.shade100,
-                                              borderRadius: BorderRadius.circular(4),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
                                               border: Border.all(
                                                 color: Colors.amber.shade600,
                                               ),
@@ -2584,14 +2676,16 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                                                 const SizedBox(width: 4),
                                                 Flexible(
                                                   child: Text(
-                                                    'Premio: ${p1.premioNombre}',
+                                                    'Premio: ${p2.premioNombre}',
                                                     style: TextStyle(
-                                                      fontWeight: FontWeight.bold,
+                                                      fontWeight:
+                                                          FontWeight.bold,
                                                       fontSize: 11,
                                                       color: Colors.amber.shade900,
                                                     ),
                                                     maxLines: 1,
-                                                    overflow: TextOverflow.ellipsis,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
                                                   ),
                                                 ),
                                               ],
@@ -2600,145 +2694,84 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                                         ],
                                       ],
                                     ),
+                                  )
+                                : Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade50,
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: Colors.grey.shade200,
+                                        style: BorderStyle.none,
+                                      ),
+                                    ),
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      'Sin segunda pieza registrada',
+                                      style: TextStyle(
+                                        color: Colors.grey.shade500,
+                                        fontSize: 12,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  );
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (!isCardNarrow)
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      folioWidget,
+                                      const SizedBox(width: 14),
+                                      Expanded(child: artesanoInfo),
+                                      const SizedBox(width: 8),
+                                      actionsButtons,
+                                    ],
+                                  )
+                                else ...[
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      folioWidget,
+                                      const SizedBox(width: 14),
+                                      Expanded(child: artesanoInfo),
+                                    ],
                                   ),
-                                ),
-
-                                const SizedBox(width: 12),
-
-                                // PIEZA 2 (SI APLICA)
-                                Expanded(
-                                  child:
-                                      p2 != null && p2.nombre.trim().isNotEmpty
-                                      ? Container(
-                                          padding: const EdgeInsets.all(10),
-                                          decoration: BoxDecoration(
-                                            color: Colors.grey.shade50,
-                                            borderRadius: BorderRadius.circular(
-                                              6,
-                                            ),
-                                            border: Border.all(
-                                              color: Colors.grey.shade200,
-                                            ),
-                                          ),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Row(
-                                                children: [
-                                                  const Text(
-                                                    'Pieza 2 (Segunda Pieza):',
-                                                    style: TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontSize: 12,
-                                                      color: AppTheme.casart800,
-                                                    ),
-                                                  ),
-                                                  const Spacer(),
-                                                  Text(
-                                                    Formatters.formatCurrency(
-                                                      p2.costoVenta,
-                                                    ),
-                                                    style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontSize: 13,
-                                                      color:
-                                                          AppTheme.verdeSuccess,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                p2.nombre,
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 13,
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                'Rama: ${p2.ramaNombre ?? 'General'} | Cat: ${p2.categoriaNombre ?? ''}${p2.subcategoriaNombre != null ? ' - ${p2.subcategoriaNombre}' : ''}',
-                                                style: TextStyle(
-                                                  color: Colors.grey.shade600,
-                                                  fontSize: 11,
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                              if (p2.premioNombre != null &&
-                                                  p2.premioNombre!.trim().isNotEmpty) ...[
-                                                const SizedBox(height: 6),
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 3,
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.amber.shade100,
-                                                    borderRadius: BorderRadius.circular(4),
-                                                    border: Border.all(
-                                                      color: Colors.amber.shade600,
-                                                    ),
-                                                  ),
-                                                  child: Row(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      Icon(
-                                                        Icons.emoji_events,
-                                                        size: 14,
-                                                        color: Colors.amber.shade900,
-                                                      ),
-                                                      const SizedBox(width: 4),
-                                                      Flexible(
-                                                        child: Text(
-                                                          'Premio: ${p2.premioNombre}',
-                                                          style: TextStyle(
-                                                            fontWeight: FontWeight.bold,
-                                                            fontSize: 11,
-                                                            color: Colors.amber.shade900,
-                                                          ),
-                                                          maxLines: 1,
-                                                          overflow: TextOverflow.ellipsis,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ],
-                                            ],
-                                          ),
-                                        )
-                                      : Container(
-                                          padding: const EdgeInsets.all(10),
-                                          decoration: BoxDecoration(
-                                            color: Colors.grey.shade50,
-                                            borderRadius: BorderRadius.circular(
-                                              6,
-                                            ),
-                                            border: Border.all(
-                                              color: Colors.grey.shade200,
-                                              style: BorderStyle.none,
-                                            ),
-                                          ),
-                                          alignment: Alignment.centerLeft,
-                                          child: Text(
-                                            'Sin segunda pieza registrada',
-                                            style: TextStyle(
-                                              color: Colors.grey.shade500,
-                                              fontSize: 12,
-                                              fontStyle: FontStyle.italic,
-                                            ),
-                                          ),
-                                        ),
-                                ),
+                                  const SizedBox(height: 10),
+                                  actionsButtons,
+                                ],
+                                const SizedBox(height: 12),
+                                const Divider(height: 1),
+                                const SizedBox(height: 12),
+                                if (isCardNarrow)
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      piece1Widget,
+                                      if (hasPiece2) ...[
+                                        const SizedBox(height: 10),
+                                        piece2Widget,
+                                      ],
+                                    ],
+                                  )
+                                else
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(child: piece1Widget),
+                                      const SizedBox(width: 12),
+                                      Expanded(child: piece2Widget),
+                                    ],
+                                  ),
                               ],
-                            ),
-                          ],
+                            );
+                          },
                         ),
                       ),
                     );

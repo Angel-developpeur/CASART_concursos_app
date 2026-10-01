@@ -69,58 +69,118 @@ class ConcursosListView extends ConsumerWidget {
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: TextField(
-                        decoration: const InputDecoration(
-                          hintText: 'Buscar concurso por nombre o sede...',
-                          prefixIcon: Icon(Icons.search),
-                          isDense: true,
+                child: LayoutBuilder(
+                  builder: (context, filterConstraints) {
+                    final isCompact = filterConstraints.maxWidth < 650;
+                    if (isCompact) {
+                      return Column(
+                        children: [
+                          TextField(
+                            decoration: const InputDecoration(
+                              hintText: 'Buscar concurso por nombre o sede...',
+                              prefixIcon: Icon(Icons.search),
+                              isDense: true,
+                            ),
+                            onChanged: (val) {
+                              ref.read(concursosFilterProvider.notifier).update((s) => s.copyWith(search: val));
+                            },
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: DropdownButtonFormField<String?>(
+                                  initialValue: filter.ejercicio,
+                                  isExpanded: true,
+                                  decoration: const InputDecoration(labelText: 'Año (Ejercicio)', isDense: true),
+                                  items: [
+                                    const DropdownMenuItem<String?>(value: null, child: Text('Todos los años')),
+                                    ...List.generate(6, (i) {
+                                      final y = (DateTime.now().year - 2 + i).toString();
+                                      return DropdownMenuItem<String?>(value: y, child: Text(y));
+                                    }),
+                                  ],
+                                  onChanged: (val) {
+                                    ref.read(concursosFilterProvider.notifier).update((s) => s.copyWith(ejercicio: val, clearEjercicio: val == null));
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: DropdownButtonFormField<bool?>(
+                                  initialValue: filter.finalizado,
+                                  isExpanded: true,
+                                  decoration: const InputDecoration(labelText: 'Estatus', isDense: true),
+                                  items: const [
+                                    DropdownMenuItem<bool?>(value: null, child: Text('Todos')),
+                                    DropdownMenuItem<bool?>(value: false, child: Text('En Proceso')),
+                                    DropdownMenuItem<bool?>(value: true, child: Text('Finalizados')),
+                                  ],
+                                  onChanged: (val) {
+                                    ref.read(concursosFilterProvider.notifier).update((s) => s.copyWith(finalizado: val, clearFinalizado: val == null));
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: TextField(
+                            decoration: const InputDecoration(
+                              hintText: 'Buscar concurso por nombre o sede...',
+                              prefixIcon: Icon(Icons.search),
+                              isDense: true,
+                            ),
+                            onChanged: (val) {
+                              ref.read(concursosFilterProvider.notifier).update((s) => s.copyWith(search: val));
+                            },
+                          ),
                         ),
-                        onChanged: (val) {
-                          ref.read(concursosFilterProvider.notifier).update((s) => s.copyWith(search: val));
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      flex: 1,
-                      child: DropdownButtonFormField<String?>(
-                        initialValue: filter.ejercicio,
-                        isExpanded: true,
-                        decoration: const InputDecoration(labelText: 'Año (Ejercicio)', isDense: true),
-                        items: [
-                          const DropdownMenuItem<String?>(value: null, child: Text('Todos los años')),
-                          ...List.generate(6, (i) {
-                            final y = (DateTime.now().year - 2 + i).toString();
-                            return DropdownMenuItem<String?>(value: y, child: Text(y));
-                          }),
-                        ],
-                        onChanged: (val) {
-                          ref.read(concursosFilterProvider.notifier).update((s) => s.copyWith(ejercicio: val, clearEjercicio: val == null));
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      flex: 1,
-                      child: DropdownButtonFormField<bool?>(
-                        initialValue: filter.finalizado,
-                        isExpanded: true,
-                        decoration: const InputDecoration(labelText: 'Estatus', isDense: true),
-                        items: const [
-                          DropdownMenuItem<bool?>(value: null, child: Text('Todos')),
-                          DropdownMenuItem<bool?>(value: false, child: Text('En Proceso')),
-                          DropdownMenuItem<bool?>(value: true, child: Text('Finalizados')),
-                        ],
-                        onChanged: (val) {
-                          ref.read(concursosFilterProvider.notifier).update((s) => s.copyWith(finalizado: val, clearFinalizado: val == null));
-                        },
-                      ),
-                    ),
-                  ],
+                        const SizedBox(width: 16),
+                        Expanded(
+                          flex: 1,
+                          child: DropdownButtonFormField<String?>(
+                            initialValue: filter.ejercicio,
+                            isExpanded: true,
+                            decoration: const InputDecoration(labelText: 'Año (Ejercicio)', isDense: true),
+                            items: [
+                              const DropdownMenuItem<String?>(value: null, child: Text('Todos los años')),
+                              ...List.generate(6, (i) {
+                                final y = (DateTime.now().year - 2 + i).toString();
+                                return DropdownMenuItem<String?>(value: y, child: Text(y));
+                              }),
+                            ],
+                            onChanged: (val) {
+                              ref.read(concursosFilterProvider.notifier).update((s) => s.copyWith(ejercicio: val, clearEjercicio: val == null));
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          flex: 1,
+                          child: DropdownButtonFormField<bool?>(
+                            initialValue: filter.finalizado,
+                            isExpanded: true,
+                            decoration: const InputDecoration(labelText: 'Estatus', isDense: true),
+                            items: const [
+                              DropdownMenuItem<bool?>(value: null, child: Text('Todos')),
+                              DropdownMenuItem<bool?>(value: false, child: Text('En Proceso')),
+                              DropdownMenuItem<bool?>(value: true, child: Text('Finalizados')),
+                            ],
+                            onChanged: (val) {
+                              ref.read(concursosFilterProvider.notifier).update((s) => s.copyWith(finalizado: val, clearFinalizado: val == null));
+                            },
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
@@ -257,15 +317,26 @@ class ConcursosListView extends ConsumerWidget {
                                         style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                                       ),
                                       const SizedBox(height: 4),
-                                      Row(
+                                      Wrap(
+                                        spacing: 16,
+                                        runSpacing: 4,
                                         children: [
-                                          const Icon(Icons.location_on_outlined, size: 16, color: Colors.grey),
-                                          const SizedBox(width: 4),
-                                          Text(c.lugar ?? 'Sede no especificada', style: const TextStyle(color: Colors.grey, fontSize: 13)),
-                                          const SizedBox(width: 20),
-                                          const Icon(Icons.calendar_today_outlined, size: 15, color: Colors.grey),
-                                          const SizedBox(width: 4),
-                                          Text('Registro: ${Formatters.formatDate(c.fechaInicioRegistro)} al ${Formatters.formatDate(c.fechaLimiteRegistro)}', style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.location_on_outlined, size: 16, color: Colors.grey),
+                                              const SizedBox(width: 4),
+                                              Text(c.lugar ?? 'Sede no especificada', style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                                            ],
+                                          ),
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.calendar_today_outlined, size: 15, color: Colors.grey),
+                                              const SizedBox(width: 4),
+                                              Text('Registro: ${Formatters.formatDate(c.fechaInicioRegistro)} al ${Formatters.formatDate(c.fechaLimiteRegistro)}', style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                                            ],
+                                          ),
                                         ],
                                       ),
                                       const SizedBox(height: 10),

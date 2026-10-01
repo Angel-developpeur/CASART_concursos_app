@@ -836,7 +836,10 @@ class _PremiosViewState extends ConsumerState<PremiosView> {
 
         return Scaffold(
           appBar: AppBar(
-            title: Text('Bolsa de Premios - ${concurso.nombre}'),
+            title: Text(
+              'Bolsa de Premios - ${concurso.nombre}',
+              overflow: TextOverflow.ellipsis,
+            ),
             actions: [
               Container(
                 margin: const EdgeInsets.only(right: 16),
@@ -944,231 +947,85 @@ class _PremiosViewState extends ConsumerState<PremiosView> {
                           ),
                         ),
                       Expanded(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // COLUMNA 1: LISTADO DE PREMIOS CONFIGURADOS
-                            Expanded(
-                              flex: 3,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Premios Registrados (${_premios.length})',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  if (_premios.isEmpty)
-                                    Card(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(32),
-                                        child: Center(
-                                          child: Column(
-                                            children: [
-                                              Icon(
-                                                Icons.emoji_events_outlined,
-                                                size: 48,
-                                                color: Colors.grey[400],
-                                              ),
-                                              const SizedBox(height: 8),
-                                              const Text(
-                                                'No hay premios agregados a la bolsa de este concurso.',
-                                              ),
-                                              if (!concurso.finalizado) ...[
-                                                const SizedBox(height: 8),
-                                                OutlinedButton(
-                                                  onPressed: () =>
-                                                      _agregarPremio(concurso),
-                                                  child: const Text(
-                                                    'Agregar Primer Premio',
-                                                  ),
-                                                ),
-                                              ],
-                                            ],
-                                          ),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            if (constraints.maxWidth < 800) {
+                              return DefaultTabController(
+                                length: 2,
+                                child: Column(
+                                  children: [
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade100,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: TabBar(
+                                        indicatorSize: TabBarIndicatorSize.tab,
+                                        indicator: BoxDecoration(
+                                          color: AppTheme.casart800,
+                                          borderRadius:
+                                              BorderRadius.circular(8),
                                         ),
-                                      ),
-                                    )
-                                  else
-                                    Expanded(
-                                      child: ListView.builder(
-                                        itemCount: _premios.length,
-                                        itemBuilder: (ctx, i) {
-                                          final p = _premios[i];
-                                          return Card(
-                                            margin: const EdgeInsets.only(
-                                              bottom: 8,
-                                            ),
-                                            child: ListTile(
-                                              leading: const CircleAvatar(
-                                                backgroundColor:
-                                                    AppTheme.ocreAccent,
-                                                foregroundColor: Colors.white,
-                                                child: Icon(
-                                                  Icons.military_tech,
-                                                ),
-                                              ),
-                                              title: Text(
-                                                p.nombre,
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                              subtitle: Text(
-                                                '${p.categoriaNombre ?? 'Global (Cualquier categoría)'} ${p.subcategoriaNombre != null ? '| ${p.subcategoriaNombre}' : ''} • Límite: ${p.limiteOtorgacion}',
-                                              ),
-                                              trailing: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Text(
-                                                    Formatters.formatCurrency(
-                                                      p.monto,
-                                                    ),
-                                                    style: const TextStyle(
-                                                      fontSize: 15,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color:
-                                                          AppTheme.verdeSuccess,
-                                                    ),
-                                                  ),
-                                                  // Botón "Premiar" comentado: la premiación se realiza desde la lista de piezas
-                                                  /*
-                                                  const SizedBox(width: 12),
-                                                  ElevatedButton(
-                                                    style: ElevatedButton.styleFrom(
-                                                      backgroundColor:
-                                                          AppTheme.casart800,
-                                                      foregroundColor:
-                                                          Colors.white,
-                                                      padding:
-                                                          const EdgeInsets.symmetric(
-                                                            horizontal: 10,
-                                                            vertical: 6,
-                                                          ),
-                                                    ),
-                                                    onPressed: () =>
-                                                        _premiarPieza(
-                                                          p,
-                                                          concurso,
-                                                        ),
-                                                    child: const Text(
-                                                      'Premiar',
-                                                      style: TextStyle(
-                                                        fontSize: 12,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  */
-                                                  IconButton(
-                                                    icon: const Icon(
-                                                      Icons.edit_outlined,
-                                                      color: AppTheme.casart800,
-                                                    ),
-                                                    tooltip: 'Editar premio',
-                                                    onPressed: () =>
-                                                        _mostrarFormularioPremio(
-                                                          concurso,
-                                                          premioToEdit: p,
-                                                        ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-
-                            const SizedBox(width: 24),
-
-                            // COLUMNA 2: GANADORES DICTAMINADOS
-                            Expanded(
-                              flex: 2,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Ganadores Asignados (Dictamen)',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  if (_ganadores.isEmpty)
-                                    Card(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(32),
-                                        child: Center(
-                                          child: Text(
-                                            'Aún no se han asignado ganadores a los premios.',
-                                            style: TextStyle(
-                                              color: Colors.grey[600],
-                                            ),
-                                          ),
+                                        labelColor: Colors.white,
+                                        unselectedLabelColor:
+                                            Colors.grey.shade700,
+                                        labelStyle: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
                                         ),
-                                      ),
-                                    )
-                                  else
-                                    Expanded(
-                                      child: ListView.builder(
-                                        itemCount: _ganadores.length,
-                                        itemBuilder: (ctx, i) {
-                                          final g = _ganadores[i];
-                                          return Card(
-                                            color: AppTheme.verdeLight,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                              side: const BorderSide(
-                                                color: AppTheme.verdeBorder,
-                                              ),
-                                            ),
-                                            margin: const EdgeInsets.only(
-                                              bottom: 8,
-                                            ),
-                                            child: ListTile(
-                                              leading: const Icon(
-                                                Icons.verified,
-                                                color: AppTheme.verdeSuccess,
-                                              ),
-                                              title: Text(
-                                                g['premio_nombre'] as String? ??
-                                                    '',
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                              subtitle: Text(
-                                                'Ganador: ${g['artesano_nombre']} ${g['artesano_paterno']}\nPieza: ${g['artesania_nombre']} [Folio #${g['folio_concurso']}]',
-                                              ),
-                                              trailing: Text(
-                                                Formatters.formatCurrency(
-                                                  (g['premio_monto'] as num?)
-                                                          ?.toDouble() ??
-                                                      0.0,
-                                                ),
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  color: AppTheme.verdeSuccess,
-                                                ),
-                                              ),
-                                            ),
-                                          );
-                                        },
+                                        tabs: [
+                                          Tab(
+                                            text:
+                                                'Premios Registrados (${_premios.length})',
+                                          ),
+                                          Tab(
+                                            text:
+                                                'Ganadores (${_ganadores.length})',
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                ],
-                              ),
-                            ),
-                          ],
+                                    const SizedBox(height: 12),
+                                    Expanded(
+                                      child: TabBarView(
+                                        children: [
+                                          _buildPremiosList(
+                                            concurso,
+                                            showTitle: false,
+                                          ),
+                                          _buildGanadoresList(
+                                            showTitle: false,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+
+                            return Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // COLUMNA 1: LISTADO DE PREMIOS CONFIGURADOS
+                                Expanded(
+                                  flex: 3,
+                                  child: _buildPremiosList(
+                                    concurso,
+                                    showTitle: true,
+                                  ),
+                                ),
+                                const SizedBox(width: 24),
+                                // COLUMNA 2: GANADORES DICTAMINADOS
+                                Expanded(
+                                  flex: 2,
+                                  child: _buildGanadoresList(
+                                    showTitle: true,
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ),
                     ],
@@ -1176,6 +1033,241 @@ class _PremiosViewState extends ConsumerState<PremiosView> {
                 ),
         );
       },
+    );
+  }
+
+  Widget _buildPremiosList(Concurso concurso, {required bool showTitle}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (showTitle) ...[
+          Text(
+            'Premios Registrados (${_premios.length})',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (_premios.isEmpty)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.emoji_events_outlined,
+                      size: 48,
+                      color: Colors.grey[400],
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'No hay premios agregados a la bolsa de este concurso.',
+                    ),
+                    if (!concurso.finalizado) ...[
+                      const SizedBox(height: 8),
+                      OutlinedButton(
+                        onPressed: () => _agregarPremio(concurso),
+                        child: const Text('Agregar Primer Premio'),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          )
+        else
+          Expanded(
+            child: ListView.builder(
+              itemCount: _premios.length,
+              itemBuilder: (ctx, i) {
+                final p = _premios[i];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  elevation: 1,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    side: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const CircleAvatar(
+                          backgroundColor: AppTheme.ocreAccent,
+                          foregroundColor: Colors.white,
+                          radius: 18,
+                          child: Icon(Icons.military_tech, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                p.nombre,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${p.categoriaNombre ?? 'Global (Cualquier categoría)'} ${p.subcategoriaNombre != null ? '| ${p.subcategoriaNombre}' : ''} • Límite: ${p.limiteOtorgacion}',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: Colors.grey.shade700,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 2,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              Formatters.formatCurrency(p.monto),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.verdeSuccess,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.edit_outlined,
+                                color: AppTheme.casart800,
+                                size: 19,
+                              ),
+                              tooltip: 'Editar premio',
+                              padding: const EdgeInsets.all(6),
+                              constraints: const BoxConstraints(),
+                              onPressed: () => _mostrarFormularioPremio(
+                                concurso,
+                                premioToEdit: p,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildGanadoresList({required bool showTitle}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (showTitle) ...[
+          const Text(
+            'Ganadores Asignados (Dictamen)',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (_ganadores.isEmpty)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Center(
+                child: Text(
+                  'Aún no se han asignado ganadores a los premios.',
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+              ),
+            ),
+          )
+        else
+          Expanded(
+            child: ListView.builder(
+              itemCount: _ganadores.length,
+              itemBuilder: (ctx, i) {
+                final g = _ganadores[i];
+                return Card(
+                  color: AppTheme.verdeLight,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    side: const BorderSide(color: AppTheme.verdeBorder),
+                  ),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.verified,
+                          color: AppTheme.verdeSuccess,
+                          size: 22,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                g['premio_nombre'] as String? ?? '',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Ganador: ${g['artesano_nombre']} ${g['artesano_paterno']}\nPieza: ${g['artesania_nombre']} [Folio #${g['folio_concurso']}]',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: Colors.grey.shade800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          Formatters.formatCurrency(
+                            (g['premio_monto'] as num?)?.toDouble() ?? 0.0,
+                          ),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: AppTheme.verdeSuccess,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+      ],
     );
   }
 }

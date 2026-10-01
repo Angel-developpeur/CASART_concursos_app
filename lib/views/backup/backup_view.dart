@@ -675,7 +675,9 @@ class _BackupViewState extends ConsumerState<BackupView> {
                     const SizedBox(height: 24),
 
                     // BOTONES DE ACCIÓN
-                    Row(
+                    Wrap(
+                      spacing: 16,
+                      runSpacing: 12,
                       children: [
                         ElevatedButton.icon(
                           icon: _isLoading
@@ -701,7 +703,6 @@ class _BackupViewState extends ConsumerState<BackupView> {
                           ),
                           onPressed: _isLoading ? null : _respaldarEnUsb,
                         ),
-                        const SizedBox(width: 16),
                         OutlinedButton.icon(
                           icon: const Icon(Icons.restore_page_outlined),
                           label: const Text('Restaurar desde Respaldo (.db)'),
@@ -748,14 +749,14 @@ class _BackupViewState extends ConsumerState<BackupView> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Exportación a Microsoft Excel (.xlsx)',
+                              'Exportar en Excel',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             Text(
-                              'Genera libros con hojas de Cédulas de Inscripción, Aportaciones y Premios',
+                              'Generar excel con datos de  Inscripción, Aportaciones y Premios',
                               style: TextStyle(
                                 color: Colors.grey,
                                 fontSize: 13,
@@ -797,70 +798,91 @@ class _BackupViewState extends ConsumerState<BackupView> {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  flex: 3,
-                                  child: DropdownButtonFormField<int>(
-                                    initialValue: currentConcurso.id,
-                                    decoration: const InputDecoration(
-                                      labelText:
-                                          'Selecciona el Concurso a Exportar',
-                                      prefixIcon: Icon(
-                                        Icons.emoji_events_outlined,
-                                      ),
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                final isCompact = constraints.maxWidth < 650;
+                                final dropdownWidget = DropdownButtonFormField<int>(
+                                  initialValue: currentConcurso.id,
+                                  decoration: const InputDecoration(
+                                    labelText:
+                                        'Selecciona el Concurso a Exportar',
+                                    prefixIcon: Icon(
+                                      Icons.emoji_events_outlined,
                                     ),
-                                    items: concursos.map((c) {
-                                      return DropdownMenuItem<int>(
-                                        value: c.id,
-                                        child: Text(
-                                          '${c.nombre} (${c.ejercicio})',
-                                        ),
+                                  ),
+                                  items: concursos.map((c) {
+                                    return DropdownMenuItem<int>(
+                                      value: c.id,
+                                      child: Text(
+                                        '${c.nombre} (${c.ejercicio})',
+                                      ),
+                                    );
+                                  }).toList(),
+                                  onChanged: (val) {
+                                    if (val != null) {
+                                      setState(
+                                        () => _selectedConcursoIdForExport =
+                                            val,
                                       );
-                                    }).toList(),
-                                    onChanged: (val) {
-                                      if (val != null) {
-                                        setState(
-                                          () => _selectedConcursoIdForExport =
-                                              val,
-                                        );
-                                      }
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  flex: 2,
-                                  child: ElevatedButton.icon(
-                                    icon: _isLoading
-                                        ? const SizedBox(
-                                            width: 18,
-                                            height: 18,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : const Icon(Icons.download),
-                                    label: const Text(
-                                      'Exportar a Excel (.xlsx)',
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 20,
-                                        vertical: 16,
-                                      ),
-                                      backgroundColor: AppTheme.verdeSuccess,
-                                      foregroundColor: Colors.white,
-                                    ),
-                                    onPressed: _isLoading
-                                        ? null
-                                        : () => _exportarConcursoAExcel(
-                                            currentConcurso,
+                                    }
+                                  },
+                                );
+
+                                final buttonWidget = ElevatedButton.icon(
+                                  icon: _isLoading
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
                                           ),
+                                        )
+                                      : const Icon(Icons.download),
+                                  label: const Text(
+                                    'Exportar a Excel (.xlsx)',
                                   ),
-                                ),
-                              ],
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 16,
+                                    ),
+                                    backgroundColor: AppTheme.verdeSuccess,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  onPressed: _isLoading
+                                      ? null
+                                      : () => _exportarConcursoAExcel(
+                                          currentConcurso,
+                                        ),
+                                );
+
+                                if (isCompact) {
+                                  return Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      dropdownWidget,
+                                      const SizedBox(height: 12),
+                                      buttonWidget,
+                                    ],
+                                  );
+                                }
+
+                                return Row(
+                                  children: [
+                                    Expanded(
+                                      flex: 3,
+                                      child: dropdownWidget,
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      flex: 2,
+                                      child: buttonWidget,
+                                    ),
+                                  ],
+                                );
+                              },
                             ),
                             const SizedBox(height: 16),
                             Container(
@@ -929,7 +951,7 @@ class _BackupViewState extends ConsumerState<BackupView> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Sincronización (.json)',
+                              'Exportar en Yeizon',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,

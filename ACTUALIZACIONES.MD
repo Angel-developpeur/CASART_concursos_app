@@ -33,7 +33,7 @@
 
   4. Crear el Release en GitHub:
       • Entra a tu repositorio: Angel-developpeur/CASART_concursos_app/releases https://github.com/Angel-developpeur/CASART_concursos_app/releases.
-      • Haz clic en "Draft a new release" (o Crear nuevo release).
+      • Haz clic en "Draft a new release" (o Crear nuevo     release).
       • En Choose a tag, escribe la versión: v1.0.1 y pulsa Create new tag.
       • Pon un título (ej: Versión 1.0.1 - Mejoras y correcciones).
       • Describe las novedades en la caja de texto.
