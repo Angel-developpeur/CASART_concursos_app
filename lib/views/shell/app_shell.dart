@@ -9,6 +9,7 @@ import '../concursos/concursos_list_view.dart';
 import '../inscripcion/inscripcion_view.dart';
 import '../premios/premios_view.dart';
 import '../backup/backup_view.dart';
+import '../tutorial/tutorial_view.dart';
 import '../backup/log_viewer_dialog.dart';
 import '../network/network_config_dialog.dart';
 import '../common/update_dialog.dart';
@@ -158,6 +159,13 @@ class _AppShellState extends ConsumerState<AppShell> {
                         icon: Icons.usb_outlined,
                         activeIcon: Icons.usb,
                         title: 'Respaldos y Excel',
+                      ),
+                      const SizedBox(height: 6),
+                      _buildNavItem(
+                        index: 4,
+                        icon: Icons.menu_book_outlined,
+                        activeIcon: Icons.menu_book,
+                        title: 'Tutorial y Guía',
                       ),
                     ],
                   ),
@@ -615,6 +623,10 @@ class _AppShellState extends ConsumerState<AppShell> {
                       const InscripcionView(),
                       const PremiosView(),
                       const BackupView(),
+                      TutorialView(
+                        onNavigate: (tabIndex) =>
+                            setState(() => _currentIndex = tabIndex),
+                      ),
                     ],
                   ),
                 ),
