@@ -66,19 +66,30 @@ jobs:
         run: flutter build windows --release
 
       - name: Compilar Instalador .exe con Inno Setup
+        shell: pwsh
         run: |
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DMyAppVersion="${{ needs.check-commit.outputs.version }}" installer.iss
+          $iscc = (Get-Command iscc.exe -ErrorAction SilentlyContinue)?.Source
+          if (-not $iscc) {
+            if (Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe") {
+              $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+            } elseif (Test-Path "C:\Program Files\Inno Setup 6\ISCC.exe") {
+              $iscc = "C:\Program Files\Inno Setup 6\ISCC.exe"
+            } else {
+              $iscc = "C:\ProgramData\chocolatey\bin\iscc.exe"
+            }
+          }
+          & $iscc /DMyAppVersion="${{ needs.check-commit.outputs.version }}" installer.iss
 
       - name: Renombrar instalador con la versión
         shell: pwsh
         run: |
           Move-Item -Path "build\installer\Instalador_Concursos_CASART.exe" -Destination "build\installer\Instalador_Concursos_CASART_${{ needs.check-commit.outputs.version }}.exe"
 
-          - name: Subir artefacto Windows
-            uses: actions/upload-artifact@v4
-            with:
-              name: windows-installer
-              path: build\installer\Instalador_Concursos_CASART_*.exe
+      - name: Subir artefacto Windows
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: build/installer/Instalador_Concursos_CASART_*.exe
 
   build-macos:
     name: Compilar Instalador macOS (.dmg)
