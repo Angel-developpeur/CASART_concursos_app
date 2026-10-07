@@ -263,6 +263,14 @@ class PremioRepository {
     required int idArtesania,
   }) async {
     try {
+      if (apiClient != null) {
+        await apiClient!.removerGanador(
+          idConcurso: idConcurso,
+          idArtesania: idArtesania,
+        );
+        return;
+      }
+
       final db = await _dbHelper.database;
       await db.delete('premiacion', where: 'id_artesania = ?', whereArgs: [idArtesania]);
       await db.update(
@@ -292,6 +300,18 @@ class PremioRepository {
   }
 
   Future<Map<int, int>> getConteoPremiosOtorgados(int idConcurso) async {
+    if (apiClient != null) {
+      final ganadores = await apiClient!.getGanadores(idConcurso);
+      final Map<int, int> resultado = {};
+      for (final row in ganadores) {
+        final idPremio = row['id_premio'] as int?;
+        if (idPremio != null) {
+          resultado[idPremio] = (resultado[idPremio] ?? 0) + 1;
+        }
+      }
+      return resultado;
+    }
+
     final db = await _dbHelper.database;
     final rows = await db.rawQuery('''
       SELECT a.id_premio, COUNT(DISTINCT a.id) as conteo
@@ -322,20 +342,68 @@ class PremioRepository {
     final db = await _dbHelper.database;
 
     final query = '''
-      SELECT pr.*, 
-             p.nombre as premio_nombre, p.monto as premio_monto,
-             a.nombre as artesania_nombre, a.costo_venta as artesania_costo,
-             r.folio as folio_concurso,
-             art.nombre as artesano_nombre, art.ap_paterno as artesano_paterno, art.curp as artesano_curp,
-             c.nombre as categoria_nombre
-          FROM premiacion pr
+      SELECT 
+        pr.*,
+        pr.id as premiacion_id,
+        pr.lugar as premiacion_lugar,
+        p.id as premio_id,
+        p.nombre as premio_nombre,
+        p.monto as premio_monto,
+        p.lugar as premio_lugar,
+        p.id_tipo_premio,
+        p.id_categoria as premio_id_categoria,
+        p.id_sub_categoria as premio_id_sub_categoria,
+        tp.nombre as tipo_premio_nombre,
+        a.id as artesania_id,
+        a.nombre as artesania_nombre,
+        a.costo_venta as artesania_costo,
+        a.costo_produccion as artesania_costo_produccion,
+        a.descripcion as artesania_descripcion,
+        a.material_elaboracion,
+        a.tiempo_elaboracion,
+        a.plazo_elaboracion,
+        a.id_categoria_concurso,
+        a.id_sub_categoria_concurso,
+        r.folio as folio_concurso,
+        r.folio as registro_folio,
+        r.id as registro_id,
+        r.id_artesania_1,
+        r.id_artesania_2,
+        art.id as artesano_id,
+        art.nombre as artesano_nombre,
+        art.ap_paterno as artesano_paterno,
+        art.ap_materno as artesano_materno,
+        art.genero as artesano_genero,
+        art.curp as artesano_curp,
+        art.fecha_nacimiento as artesano_fecha_nacimiento,
+        art.max_nivel_academico as artesano_escolaridad,
+        res.municipio,
+        res.localidad,
+        res.colonia,
+        res.calle,
+        res.numero_exterior,
+        res.cp,
+        et.nombre as etnia_nombre,
+        ec.nombre as estado_civil_nombre,
+        ic.telefono,
+        cat.nombre as categoria_nombre,
+        sub.nombre as subcategoria_nombre,
+        rama.nombre as rama_nombre
+      FROM premiacion pr
       JOIN premio p ON pr.id_premio = p.id
+      LEFT JOIN tipo_premio tp ON p.id_tipo_premio = tp.id
       JOIN artesania_concurso a ON pr.id_artesania = a.id
       JOIN registro_concurso r ON (r.id_artesania_1 = a.id OR r.id_artesania_2 = a.id)
       JOIN artesano art ON r.id_artesano = art.id
-      LEFT JOIN categoria_concurso c ON a.id_categoria_concurso = c.id
+      LEFT JOIN residencia res ON art.id_residencia = res.id
+      LEFT JOIN etnia et ON art.id_etnia = et.id
+      LEFT JOIN estado_civil ec ON art.id_estado_civil = ec.id
+      LEFT JOIN info_contacto ic ON art.id_info_contacto = ic.id
+      LEFT JOIN categoria_concurso cat ON a.id_categoria_concurso = cat.id
+      LEFT JOIN sub_categoria_concurso sub ON a.id_sub_categoria_concurso = sub.id
+      LEFT JOIN rama_artesanal rama ON a.id_rama_artesanal = rama.id
       WHERE pr.id_concurso = ?
-      ORDER BY p.monto DESC, pr.lugar ASC
+      ORDER BY p.id_tipo_premio ASC, p.monto DESC, pr.lugar ASC, p.lugar ASC
     ''';
 
     return await db.rawQuery(query, [idConcurso]);

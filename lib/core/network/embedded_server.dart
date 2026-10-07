@@ -457,6 +457,44 @@ class EmbeddedServer {
       );
     });
 
+    router.delete('/api/concursos/<id>/premiacion/<idArtesania>', (
+      Request req,
+      String id,
+      String idArtesania,
+    ) async {
+      final intId = int.tryParse(id);
+      final intArtId = int.tryParse(idArtesania);
+      if (intId == null || intArtId == null) {
+        return Response.badRequest(body: 'ID inválido');
+      }
+
+      await premioRepo.removerPremiacion(
+        idConcurso: intId,
+        idArtesania: intArtId,
+      );
+
+      return Response.ok(
+        jsonEncode({'success': true}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    });
+
+    router.get('/api/concursos/<id>/premios-conteo', (
+      Request req,
+      String id,
+    ) async {
+      final intId = int.tryParse(id);
+      if (intId == null) return Response.badRequest(body: 'ID inválido');
+
+      final conteo = await premioRepo.getConteoPremiosOtorgados(intId);
+      final stringKeyMap = conteo.map((k, v) => MapEntry(k.toString(), v));
+      return Response.ok(
+        jsonEncode(stringKeyMap),
+        headers: {'Content-Type': 'application/json'},
+      );
+    });
+
+
     // MIDDLEWARE: CORS y Log
     final handler = const Pipeline()
         .addMiddleware(_corsMiddleware())

@@ -103,7 +103,7 @@ class RegistroRepository {
 
         // 2. Insertar Pieza 1
         final now = DateTime.now().toIso8601String();
-        final p1Map = pieza1.toMap();
+        final p1Map = pieza1.toTableMap();
         p1Map['created_at'] ??= now;
         p1Map['updated_at'] = now;
         final pieza1Id = await txn.insert('artesania_concurso', p1Map);
@@ -111,7 +111,7 @@ class RegistroRepository {
         // 3. Insertar Pieza 2 (si existe)
         int? pieza2Id;
         if (pieza2 != null && pieza2.nombre.trim().isNotEmpty) {
-          final p2Map = pieza2.toMap();
+          final p2Map = pieza2.toTableMap();
           p2Map['created_at'] ??= now;
           p2Map['updated_at'] = now;
           pieza2Id = await txn.insert('artesania_concurso', p2Map);
@@ -253,14 +253,14 @@ class RegistroRepository {
 
         // 3. Actualizar Pieza 1
         final now = DateTime.now().toIso8601String();
-        final p1Map = pieza1.toMap();
+        final p1Map = pieza1.toTableMap();
         p1Map.remove('id');
         p1Map['updated_at'] = now;
         await txn.update('artesania_concurso', p1Map, where: 'id = ?', whereArgs: [p1Id]);
 
         // 4. Actualizar o insertar Pieza 2
         if (pieza2 != null && pieza2.nombre.trim().isNotEmpty) {
-          final p2Map = pieza2.toMap();
+          final p2Map = pieza2.toTableMap();
           p2Map.remove('id');
           p2Map['updated_at'] = now;
           if (p2Id != null) {

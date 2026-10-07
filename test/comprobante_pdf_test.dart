@@ -151,5 +151,143 @@ void main() {
       expect(pdfBytes, isNotNull);
       expect(pdfBytes.length, greaterThan(1000));
     });
+
+    test('buildVCard incluye DESCRIPCION cuando la pieza cuenta con una descripción', () {
+      final vCard = PdfGenerator.buildVCard(
+        clave: '0001A',
+        costoVenta: 2500.0,
+        artesaniaNombre: 'Cántaro de Barro',
+        categoria: 'Alfarería y Cerámica',
+        artesanoNombre: 'Juan Pérez García',
+        telefono: '443-123-4567',
+        localidad: 'Capula',
+        descripcion: 'Cántaro tradicional con asas y acabado bruñido',
+      );
+
+      expect(vCard, contains('BEGIN:VCARD'));
+      expect(vCard, contains('END:VCARD'));
+      expect(vCard, contains('FN:0001A - JUAN PEREZ GARCIA'));
+      expect(vCard, contains('ARTESANIA: CANTARO DE BARRO'));
+      expect(vCard, contains('DESCRIPCION: CANTARO TRADICIONAL CON ASAS Y ACABADO BRUNIDO'));
+      expect(vCard, contains('RAMA: ALFARERIA Y CERAMICA'));
+    });
+
+    test('buildVCard omite DESCRIPCION cuando está vacía, nula o es N/A', () {
+      final vCardSinDesc = PdfGenerator.buildVCard(
+        clave: '0001A',
+        costoVenta: 2500.0,
+        artesaniaNombre: 'Cántaro de Barro',
+        categoria: 'Alfarería',
+        artesanoNombre: 'Juan Pérez',
+        telefono: '4431234567',
+        localidad: 'Capula',
+        descripcion: null,
+      );
+      expect(vCardSinDesc, isNot(contains('DESCRIPCION:')));
+
+      final vCardVacia = PdfGenerator.buildVCard(
+        clave: '0001A',
+        costoVenta: 2500.0,
+        artesaniaNombre: 'Cántaro de Barro',
+        categoria: 'Alfarería',
+        artesanoNombre: 'Juan Pérez',
+        telefono: '4431234567',
+        localidad: 'Capula',
+        descripcion: '   ',
+      );
+      expect(vCardVacia, isNot(contains('DESCRIPCION:')));
+
+      final vCardNA = PdfGenerator.buildVCard(
+        clave: '0001A',
+        costoVenta: 2500.0,
+        artesaniaNombre: 'Cántaro de Barro',
+        categoria: 'Alfarería',
+        artesanoNombre: 'Juan Pérez',
+        telefono: '4431234567',
+        localidad: 'Capula',
+        descripcion: 'N/A',
+      );
+      expect(vCardNA, isNot(contains('DESCRIPCION:')));
+    });
+
+    test('buildVCard normaliza saltos de línea múltiples en la descripción', () {
+      final vCard = PdfGenerator.buildVCard(
+        clave: '0002A',
+        costoVenta: 1800.0,
+        artesaniaNombre: 'Rebozo de Algodón',
+        categoria: 'Textiles',
+        artesanoNombre: 'María López',
+        telefono: '4430000000',
+        localidad: 'Zamora',
+        descripcion: 'Hilo fino\nteñido natural\n\nmedidas: 2x1m (con flecos)',
+      );
+
+      expect(vCard, contains('DESCRIPCION: HILO FINO TENIDO NATURAL MEDIDAS: 2X1M (CON FLECOS)'));
+    });
+
+    test('generateActaGanadores genera PDF horizontal oficial con tabla de ganadores y bolsa', () async {
+      final ganadores = [
+        {
+          'premio_nombre': '1er Lugar Textiles',
+          'premio_monto': 15000.0,
+          'folio_concurso': 1,
+          'artesania_nombre': 'Rebozo Tradicional',
+          'artesano_nombre': 'María',
+          'artesano_paterno': 'López',
+          'artesano_materno': 'Hernández',
+          'localidad': 'Santa Clara',
+          'municipio': 'Salvador Escalante',
+          'rama_nombre': 'Textiles',
+          'categoria_nombre': 'Algodón',
+        },
+        {
+          'premio_nombre': 'Galardón Estatal',
+          'premio_monto': 35000.0,
+          'folio_concurso': 2,
+          'artesania_nombre': 'Silla Tallada',
+          'artesano_nombre': 'Pedro',
+          'artesano_paterno': 'Gómez',
+          'artesano_materno': 'Ramírez',
+          'localidad': 'Opopeo',
+          'municipio': 'Salvador Escalante',
+          'rama_nombre': 'Madera',
+          'categoria_nombre': 'Muebles',
+        },
+      ];
+
+      final pdfBytes = await PdfGenerator.generateActaGanadores(
+        concurso: testConcurso,
+        ganadores: ganadores,
+      );
+
+      expect(pdfBytes, isNotNull);
+      expect(pdfBytes.length, greaterThan(1000));
+    });
+
+    test('generateDistintivosGanadores genera PDF con tarjetas oficiales de exhibición de ganadores', () async {
+      final ganadores = [
+        {
+          'premio_nombre': 'Galardón Estatal',
+          'premio_monto': 35000.0,
+          'folio_concurso': 1,
+          'artesania_nombre': 'Batea Laqueada',
+          'artesano_nombre': 'Rosa',
+          'artesano_paterno': 'Morales',
+          'artesano_materno': 'Cruz',
+          'localidad': 'Uruapan',
+          'municipio': 'Uruapan',
+          'rama_nombre': 'Maque',
+          'categoria_nombre': 'Bateas',
+        },
+      ];
+
+      final pdfBytes = await PdfGenerator.generateDistintivosGanadores(
+        concurso: testConcurso,
+        ganadores: ganadores,
+      );
+
+      expect(pdfBytes, isNotNull);
+      expect(pdfBytes.length, greaterThan(1000));
+    });
   });
 }

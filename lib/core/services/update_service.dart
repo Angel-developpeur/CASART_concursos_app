@@ -32,7 +32,7 @@ class UpdateInfo {
 class UpdateService {
   static const String owner = 'Angel-developpeur';
   static const String repo = 'CASART_concursos_app';
-  static const String currentVersion = '1.0.3';
+  static const String currentVersion = '1.0.7';
 
   /// Consulta la API pública de GitHub Releases para comprobar si hay una versión superior
   static Future<UpdateInfo> checkForUpdate() async {
@@ -79,7 +79,7 @@ class UpdateService {
           ? DateTime.tryParse(publishedAtStr)
           : null;
 
-      // Buscar el archivo instalador ejecutable (.exe)
+      // Buscar el archivo instalador ejecutable (.exe en Windows, .dmg en macOS)
       String? downloadUrl;
       String? assetName;
       int? assetSizeBytes;
@@ -87,7 +87,13 @@ class UpdateService {
       final assets = data['assets'] as List<dynamic>? ?? [];
       for (final asset in assets) {
         final name = (asset['name'] as String? ?? '').toLowerCase();
-        if (name.endsWith('.exe')) {
+        final matchesPlatform = Platform.isMacOS
+            ? (name.endsWith('.dmg') ||
+                  name.endsWith('.pkg') ||
+                  name.endsWith('.zip'))
+            : (name.endsWith('.exe'));
+
+        if (matchesPlatform) {
           downloadUrl = asset['browser_download_url'] as String?;
           assetName = asset['name'] as String?;
           assetSizeBytes = asset['size'] as int?;
@@ -212,9 +218,9 @@ class UpdateService {
 
   /// Ejecuta el instalador descargado y cierra la aplicación para permitir el reemplazo
   static Future<void> launchInstallerAndExit(String installerPath) async {
-    if (!Platform.isWindows) {
+    if (!Platform.isWindows && !Platform.isMacOS) {
       throw UnsupportedError(
-        'El instalador automático solo está disponible en Windows',
+        'El instalador automático solo está disponible en Windows y macOS',
       );
     }
 
@@ -223,10 +229,17 @@ class UpdateService {
       category: 'UPDATE',
     );
 
-    // Ejecuta el instalador en modo desasociado (detached)
-    await Process.start(installerPath, [], mode: ProcessStartMode.detached);
+    if (Platform.isWindows) {
+      // Ejecuta el instalador de Windows en modo desasociado (detached)
+      await Process.start(installerPath, [], mode: ProcessStartMode.detached);
+    } else if (Platform.isMacOS) {
+      // En macOS, usamos 'open' para montar la imagen .dmg o ejecutar el instalador
+      await Process.start('open', [
+        installerPath,
+      ], mode: ProcessStartMode.detached);
+    }
 
-    // Cierra la aplicación actual de inmediato para liberar dlls y ejecutables
+    // Cierra la aplicación actual de inmediato para liberar archivos y permitir el reemplazo
     exit(0);
   }
 }

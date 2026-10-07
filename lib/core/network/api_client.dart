@@ -539,4 +539,56 @@ class ApiClient {
       rethrow;
     }
   }
+
+  Future<void> removerGanador({
+    required int idConcurso,
+    required int idArtesania,
+  }) async {
+    try {
+      final res = await _client.delete(
+        Uri.parse('$baseUrl/concursos/$idConcurso/premiacion/$idArtesania'),
+        headers: _headers,
+      );
+      if (res.statusCode != 200) {
+        throw Exception('Error al remover premio vía API: ${res.body}');
+      }
+      AppLogger.delete(
+        'Premio retirado vía API: Concurso #$idConcurso, Pieza #$idArtesania',
+        category: 'RED_CLIENTE',
+        data: {'idConcurso': idConcurso, 'idArtesania': idArtesania},
+      );
+    } catch (e, stack) {
+      AppLogger.error(
+        'Error al retirar premio vía API: $e',
+        category: 'RED_CLIENTE',
+        error: e,
+        stackTrace: stack,
+      );
+      rethrow;
+    }
+  }
+
+  Future<Map<int, int>> getConteoPremiosOtorgados(int idConcurso) async {
+    try {
+      final res = await _client.get(
+        Uri.parse('$baseUrl/concursos/$idConcurso/premios-conteo'),
+        headers: _headers,
+      );
+      if (res.statusCode == 200) {
+        final Map<String, dynamic> raw = jsonDecode(utf8.decode(res.bodyBytes));
+        return raw.map((k, v) => MapEntry(int.parse(k), v as int));
+      }
+    } catch (_) {}
+
+    // Fallback: calcular a partir de la lista de ganadores
+    final ganadores = await getGanadores(idConcurso);
+    final Map<int, int> resultado = {};
+    for (final row in ganadores) {
+      final idPremio = row['id_premio'] as int?;
+      if (idPremio != null) {
+        resultado[idPremio] = (resultado[idPremio] ?? 0) + 1;
+      }
+    }
+    return resultado;
+  }
 }

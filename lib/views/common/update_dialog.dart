@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../core/services/update_service.dart';
 import '../../core/theme/app_theme.dart';
@@ -68,7 +69,10 @@ class _UpdateDialogState extends State<UpdateDialog> {
     });
 
     try {
-      final fileName = _info!.assetName ?? 'Instalador_Concursos_CASART.exe';
+      final defaultFileName = Platform.isMacOS
+          ? 'Concursos_CASART_macOS.dmg'
+          : 'Instalador_Concursos_CASART.exe';
+      final fileName = _info!.assetName ?? defaultFileName;
       final installerPath = await UpdateService.downloadInstaller(
         downloadUrl: _info!.downloadUrl!,
         fileName: fileName,
@@ -301,14 +305,16 @@ class _UpdateDialogState extends State<UpdateDialog> {
             ),
             if (info.downloadUrl == null) ...[
               const SizedBox(height: 10),
-              const Row(
+              Row(
                 children: [
-                  Icon(Icons.info_outline, size: 16, color: Colors.orange),
-                  SizedBox(width: 6),
+                  const Icon(Icons.info_outline, size: 16, color: Colors.orange),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      'No se encontró instalador .exe adjunto en el release de GitHub.',
-                      style: TextStyle(fontSize: 11, color: Colors.orange),
+                      Platform.isMacOS
+                          ? 'No se encontró instalador .dmg adjunto en el release de GitHub.'
+                          : 'No se encontró instalador .exe adjunto en el release de GitHub.',
+                      style: const TextStyle(fontSize: 11, color: Colors.orange),
                     ),
                   ),
                 ],
@@ -363,31 +369,35 @@ class _UpdateDialogState extends State<UpdateDialog> {
                 style: const TextStyle(fontSize: 11, color: Colors.grey),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'El instalador se ejecutará automáticamente al finalizar la descarga.',
-                style: TextStyle(fontSize: 12, color: Colors.black54),
+              Text(
+                Platform.isMacOS
+                    ? 'Al finalizar la descarga, se abrirá el instalador (.dmg) para actualizar la aplicación.'
+                    : 'El instalador se ejecutará automáticamente al finalizar la descarga.',
+                style: const TextStyle(fontSize: 12, color: Colors.black54),
               ),
             ],
           ),
         );
 
       case _UpdateState.installing:
-        return const Padding(
-          padding: EdgeInsets.symmetric(vertical: 24),
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24),
           child: Column(
             children: [
-              CircularProgressIndicator(color: AppTheme.casart800),
-              SizedBox(height: 16),
+              const CircularProgressIndicator(color: AppTheme.casart800),
+              const SizedBox(height: 16),
               Text(
-                'Iniciando el instalador...',
-                style: TextStyle(
+                Platform.isMacOS
+                    ? 'Abriendo instalador (.dmg)...'
+                    : 'Iniciando el instalador...',
+                style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
                   color: AppTheme.casart800,
                 ),
               ),
-              SizedBox(height: 8),
-              Text(
+              const SizedBox(height: 8),
+              const Text(
                 'La aplicación se cerrará para aplicar los cambios.',
                 style: TextStyle(fontSize: 12, color: Colors.black54),
               ),

@@ -237,7 +237,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        'v1.0.3\nAngel developpeur',
+                        'v1.0.7\nAngel developpeur',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.white54, fontSize: 10),
                       ),
@@ -326,8 +326,9 @@ class _AppShellState extends ConsumerState<AppShell> {
                         children: [
                           Expanded(
                             child: selectedConcursoAsync.when(
-                              loading: () =>
-                                  const Text('Cargando concurso seleccionado...'),
+                              loading: () => const Text(
+                                'Cargando concurso seleccionado...',
+                              ),
                               error: (_, _) => const SizedBox.shrink(),
                               data: (concurso) {
                                 if (concurso == null) {
@@ -494,11 +495,11 @@ class _AppShellState extends ConsumerState<AppShell> {
                                   label: Text(
                                     isCompact
                                         ? (netConfig.isServer
-                                            ? 'IP: ${netConfig.localIps.isNotEmpty ? netConfig.localIps.first : '0.0.0.0'}'
-                                            : 'Terminal')
+                                              ? 'IP: ${netConfig.localIps.isNotEmpty ? netConfig.localIps.first : '0.0.0.0'}'
+                                              : 'Terminal')
                                         : (netConfig.isServer
-                                            ? 'Servidor Local (IP: ${netConfig.localIps.isNotEmpty ? netConfig.localIps.first : '0.0.0.0'})'
-                                            : 'Terminal -> ${netConfig.serverHost}'),
+                                              ? 'Servidor Local (IP: ${netConfig.localIps.isNotEmpty ? netConfig.localIps.first : '0.0.0.0'})'
+                                              : 'Terminal -> ${netConfig.serverHost}'),
                                     style: const TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.bold,
@@ -538,8 +539,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                                   onPressed: () {
                                     showDialog(
                                       context: context,
-                                      builder: (ctx) =>
-                                          const LogViewerDialog(),
+                                      builder: (ctx) => const LogViewerDialog(),
                                     );
                                   },
                                 )
@@ -570,8 +570,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                                   onPressed: () {
                                     showDialog(
                                       context: context,
-                                      builder: (ctx) =>
-                                          const LogViewerDialog(),
+                                      builder: (ctx) => const LogViewerDialog(),
                                     );
                                   },
                                 ),
@@ -591,7 +590,10 @@ class _AppShellState extends ConsumerState<AppShell> {
                                   )
                                 else
                                   TextButton.icon(
-                                    icon: const Icon(Icons.swap_horiz, size: 18),
+                                    icon: const Icon(
+                                      Icons.swap_horiz,
+                                      size: 18,
+                                    ),
                                     label: const Text('Cambiar Concurso'),
                                     onPressed: () {
                                       setState(() => _currentIndex = 0);

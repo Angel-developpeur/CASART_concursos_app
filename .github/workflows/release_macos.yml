@@ -1,0 +1,143 @@
+name: Release Automático por Commit
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  check-commit:
+    name: Validar formato del commit
+    runs-on: ubuntu-latest
+    outputs:
+      is_release: ${{ steps.parse.outputs.is_release }}
+      version: ${{ steps.parse.outputs.version }}
+      description: ${{ steps.parse.outputs.description }}
+    steps:
+      - name: Analizar mensaje del commit
+        id: parse
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          # Expresión regular: busca 'vX.Y.Z : texto' (incluso si es multilínea)
+          if echo "$COMMIT_MSG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+[a-zA-Z0-9.-]*\s*:\s*'; then
+            VERSION=$(echo "$COMMIT_MSG" | head -n 1 | sed -E 's/^(v[0-9]+\.[0-9]+\.[0-9]+[a-zA-Z0-9.-]*)\s*:\s*.*/\1/' | tr -d '[:space:]')
+            DESC=$(echo "$COMMIT_MSG" | sed -E '1s/^v[0-9]+\.[0-9]+\.[0-9]+[a-zA-Z0-9.-]*\s*:\s*//')
+
+            echo "is_release=true" >> "$GITHUB_OUTPUT"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+            # Soporte para descripciones multilínea en GitHub Actions
+            echo "description<<EOF" >> "$GITHUB_OUTPUT"
+            echo "$DESC" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+
+            echo "Versión detectada: $VERSION"
+            echo "Descripción detectada: $DESC"
+          else
+            echo "is_release=false" >> "$GITHUB_OUTPUT"
+            echo "El commit no tiene el formato 'vX.Y.Z : descripción'. No se generará Release."
+          fi
+
+  build-windows:
+    name: Compilar Instalador Windows (.exe)
+    needs: check-commit
+    if: needs.check-commit.outputs.is_release == 'true'
+    runs-on: windows-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Instalar Inno Setup
+        run: choco install innosetup -y
+
+      - name: Instalar dependencias
+        run: flutter pub get
+
+      - name: Compilar Windows Release
+        run: flutter build windows --release
+
+      - name: Compilar Instalador .exe con Inno Setup
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DMyAppVersion="${{ needs.check-commit.outputs.version }}" installer.iss
+
+      - name: Renombrar instalador con la versión
+        shell: pwsh
+        run: |
+          Move-Item -Path "build\installer\Instalador_Concursos_CASART.exe" -Destination "build\installer\Instalador_Concursos_CASART_${{ needs.check-commit.outputs.version }}.exe"
+
+          - name: Subir artefacto Windows
+            uses: actions/upload-artifact@v4
+            with:
+              name: windows-installer
+              path: build\installer\Instalador_Concursos_CASART_*.exe
+
+  build-macos:
+    name: Compilar Instalador macOS (.dmg)
+    needs: check-commit
+    if: needs.check-commit.outputs.is_release == 'true'
+    runs-on: macos-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Instalar dependencias
+        run: flutter pub get
+
+      - name: Compilar y generar .dmg
+        run: |
+          chmod +x create_installer_macos.sh
+          ./create_installer_macos.sh
+
+      - name: Renombrar DMG con la versión
+        run: |
+          mv build/Concursos_CASART_macOS.dmg build/Concursos_CASART_macOS_${{ needs.check-commit.outputs.version }}.dmg
+
+      - name: Subir artefacto macOS
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-installer
+          path: build/Concursos_CASART_macOS_*.dmg
+
+  publish-release:
+    name: Publicar Release en GitHub
+    needs: [check-commit, build-windows, build-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar instalador de Windows
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
+          path: release_assets
+
+      - name: Descargar instalador de macOS
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-installer
+          path: release_assets
+
+      - name: Crear Release y adjuntar archivos
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.check-commit.outputs.version }}
+          name: ${{ needs.check-commit.outputs.version }}
+          body: ${{ needs.check-commit.outputs.description }}
+          files: release_assets/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -9,6 +9,7 @@ import '../../providers/database_provider.dart';
 import '../../providers/concursos_provider.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/theme/app_theme.dart';
+import 'dialogo_autorizacion_concurso.dart';
 
 class ConcursoFormDialog extends ConsumerStatefulWidget {
   final Concurso? concursoToEdit;
@@ -569,7 +570,19 @@ class _ConcursoFormDialogState extends ConsumerState<ConcursoFormDialog> {
                       child: SwitchListTile(
                         value: _finalizado,
                         activeThumbColor: AppTheme.casart800,
-                        onChanged: (val) => setState(() => _finalizado = val),
+                        onChanged: (val) async {
+                          if (val == _finalizado) return;
+                          final autorizado = await DialogoAutorizacionConcurso.mostrar(
+                            context,
+                            concursoNombre: _nombreCtrl.text.trim().isNotEmpty
+                                ? _nombreCtrl.text.trim()
+                                : (widget.concursoToEdit?.nombre ?? 'Concurso'),
+                            willFinalize: val,
+                          );
+                          if (autorizado) {
+                            setState(() => _finalizado = val);
+                          }
+                        },
                         secondary: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
@@ -584,18 +597,47 @@ class _ConcursoFormDialogState extends ConsumerState<ConcursoFormDialog> {
                             size: 24,
                           ),
                         ),
-                        title: Text(
-                          _finalizado
-                              ? 'Estatus: Concurso Finalizado'
-                              : 'Estatus: Concurso En Proceso (Abierto)',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: _finalizado
-                                ? (Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.grey.shade300
-                                    : Colors.blueGrey.shade900)
-                                : AppTheme.verdeSuccess,
-                          ),
+                        title: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _finalizado
+                                    ? 'Estatus: Concurso Finalizado'
+                                    : 'Estatus: Concurso En Proceso (Abierto)',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: _finalizado
+                                      ? (Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.grey.shade300
+                                          : Colors.blueGrey.shade900)
+                                      : AppTheme.verdeSuccess,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: Colors.amber.shade700, width: 0.8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.lock_outline, size: 12, color: Colors.amber.shade900),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Protegido con clave',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.amber.shade900,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                         subtitle: Text(
                           _finalizado

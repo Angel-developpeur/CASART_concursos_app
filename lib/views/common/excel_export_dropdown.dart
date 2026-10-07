@@ -4,11 +4,15 @@ import '../../core/utils/excel_reports_service.dart';
 import '../../models/concurso.dart';
 import '../../providers/database_provider.dart';
 
+import '../premios/acta_ganadores_dialog.dart';
+
 enum TipoExportacionExcel {
   ganadoresFormatoA,
   ganadoresCompletoFormatoB,
   artesaniasInscritasFormatoC,
   artesaniasResumenFormatoD,
+  actaGanadoresPdf,
+  distintivosPdf,
 }
 
 class ExcelExportDropdown extends ConsumerStatefulWidget {
@@ -34,6 +38,8 @@ class _ExcelExportDropdownState extends ConsumerState<ExcelExportDropdown> {
 
     try {
       final dbHelper = ref.read(appDatabaseProvider);
+      final premioRepo = ref.read(premioRepositoryProvider);
+      final registroRepo = ref.read(registroRepositoryProvider);
 
       switch (tipo) {
         case TipoExportacionExcel.ganadoresFormatoA:
@@ -41,6 +47,7 @@ class _ExcelExportDropdownState extends ConsumerState<ExcelExportDropdown> {
             context: context,
             concurso: widget.concurso,
             dbHelper: dbHelper,
+            premioRepo: premioRepo,
           );
           break;
         case TipoExportacionExcel.ganadoresCompletoFormatoB:
@@ -48,6 +55,7 @@ class _ExcelExportDropdownState extends ConsumerState<ExcelExportDropdown> {
             context: context,
             concurso: widget.concurso,
             dbHelper: dbHelper,
+            premioRepo: premioRepo,
           );
           break;
         case TipoExportacionExcel.artesaniasInscritasFormatoC:
@@ -55,6 +63,7 @@ class _ExcelExportDropdownState extends ConsumerState<ExcelExportDropdown> {
             context: context,
             concurso: widget.concurso,
             dbHelper: dbHelper,
+            registroRepo: registroRepo,
           );
           break;
         case TipoExportacionExcel.artesaniasResumenFormatoD:
@@ -62,7 +71,35 @@ class _ExcelExportDropdownState extends ConsumerState<ExcelExportDropdown> {
             context: context,
             concurso: widget.concurso,
             dbHelper: dbHelper,
+            registroRepo: registroRepo,
           );
+          break;
+        case TipoExportacionExcel.actaGanadoresPdf:
+        case TipoExportacionExcel.distintivosPdf:
+          final ganadores = await premioRepo.getGanadoresByConcurso(widget.concurso.id!);
+          if (ganadores.isEmpty) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('No hay premiaciones registradas para este concurso aún.'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+            }
+          } else {
+            if (mounted) {
+              await showDialog(
+                context: context,
+                builder: (ctx) => ActaGanadoresDialog(
+                  concurso: widget.concurso,
+                  ganadores: ganadores,
+                  initialType: tipo == TipoExportacionExcel.distintivosPdf
+                      ? TipoDocumentoGanadores.distintivos
+                      : TipoDocumentoGanadores.actaOficial,
+                ),
+              );
+            }
+          }
           break;
       }
     } finally {
@@ -161,6 +198,33 @@ class _ExcelExportDropdownState extends ConsumerState<ExcelExportDropdown> {
                 SizedBox(width: 10),
                 Text(
                   'Artesanías Resumen (F-D)',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+                ),
+              ],
+            ),
+          ),
+          const PopupMenuDivider(),
+          const PopupMenuItem(
+            value: TipoExportacionExcel.actaGanadoresPdf,
+            child: Row(
+              children: [
+                Icon(Icons.picture_as_pdf, color: Color(0xFFDC2626), size: 18),
+                SizedBox(width: 10),
+                Text(
+                  'Acta de Ganadores (PDF)',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+                ),
+              ],
+            ),
+          ),
+          const PopupMenuItem(
+            value: TipoExportacionExcel.distintivosPdf,
+            child: Row(
+              children: [
+                Icon(Icons.badge_outlined, color: Color(0xFFD97706), size: 18),
+                SizedBox(width: 10),
+                Text(
+                  'Distintivos de Pieza (PDF)',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
                 ),
               ],

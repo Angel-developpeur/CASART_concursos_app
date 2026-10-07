@@ -8,6 +8,7 @@ import '../../providers/concursos_provider.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/theme/app_theme.dart';
 import '../common/excel_export_dropdown.dart';
+import 'acta_ganadores_dialog.dart';
 
 class PremiosView extends ConsumerStatefulWidget {
   const PremiosView({super.key});
@@ -861,6 +862,48 @@ class _PremiosViewState extends ConsumerState<PremiosView> {
                 ),
               ),
               ExcelExportDropdown(concurso: concurso),
+              if (_ganadores.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.picture_as_pdf, size: 16),
+                  label: const Text('Acta PDF'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFDC2626),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => ActaGanadoresDialog(
+                        concurso: concurso,
+                        ganadores: _ganadores,
+                        initialType: TipoDocumentoGanadores.actaOficial,
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.badge_outlined, size: 16),
+                  label: const Text('Distintivos PDF'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFD97706),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => ActaGanadoresDialog(
+                        concurso: concurso,
+                        ganadores: _ganadores,
+                        initialType: TipoDocumentoGanadores.distintivos,
+                      ),
+                    );
+                  },
+                ),
+              ],
               const SizedBox(width: 12),
               if (!concurso.finalizado)
                 ElevatedButton.icon(
@@ -994,6 +1037,7 @@ class _PremiosViewState extends ConsumerState<PremiosView> {
                                             showTitle: false,
                                           ),
                                           _buildGanadoresList(
+                                            concurso,
                                             showTitle: false,
                                           ),
                                         ],
@@ -1020,6 +1064,7 @@ class _PremiosViewState extends ConsumerState<PremiosView> {
                                 Expanded(
                                   flex: 2,
                                   child: _buildGanadoresList(
+                                    concurso,
                                     showTitle: true,
                                   ),
                                 ),
@@ -1172,17 +1217,59 @@ class _PremiosViewState extends ConsumerState<PremiosView> {
     );
   }
 
-  Widget _buildGanadoresList({required bool showTitle}) {
+  Widget _buildGanadoresList(Concurso concurso, {required bool showTitle}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (showTitle) ...[
-          const Text(
-            'Ganadores Asignados (Dictamen)',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            children: [
+              const Text(
+                'Ganadores Asignados (Dictamen)',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              if (_ganadores.isNotEmpty) ...[
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.picture_as_pdf, size: 16, color: Color(0xFFDC2626)),
+                  label: const Text('Ver Acta Oficial (PDF)'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => ActaGanadoresDialog(
+                        concurso: concurso,
+                        ganadores: _ganadores,
+                        initialType: TipoDocumentoGanadores.actaOficial,
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.badge_outlined, size: 16, color: Color(0xFFD97706)),
+                  label: const Text('Ver Distintivos (PDF)'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => ActaGanadoresDialog(
+                        concurso: concurso,
+                        ganadores: _ganadores,
+                        initialType: TipoDocumentoGanadores.distintivos,
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ],
           ),
           const SizedBox(height: 12),
         ],
@@ -1250,15 +1337,39 @@ class _PremiosViewState extends ConsumerState<PremiosView> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          Formatters.formatCurrency(
-                            (g['premio_monto'] as num?)?.toDouble() ?? 0.0,
-                          ),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: AppTheme.verdeSuccess,
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              Formatters.formatCurrency(
+                                (g['premio_monto'] as num?)?.toDouble() ?? 0.0,
+                              ),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: AppTheme.verdeSuccess,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            OutlinedButton.icon(
+                              icon: const Icon(Icons.badge_outlined, size: 13),
+                              label: const Text('Distintivo', style: TextStyle(fontSize: 11)),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (ctx) => ActaGanadoresDialog(
+                                    concurso: concurso,
+                                    ganadores: [g],
+                                    initialType: TipoDocumentoGanadores.distintivos,
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
                         ),
                       ],
                     ),

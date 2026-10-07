@@ -15,6 +15,7 @@ import '../../core/data/municipios_data.dart';
 import 'comprobante_dialog.dart';
 import 'editar_inscripcion_dialog.dart';
 import 'premiar_pieza_dialog.dart';
+import '../premios/acta_ganadores_dialog.dart';
 import '../common/excel_export_dropdown.dart';
 
 class InscripcionView extends ConsumerStatefulWidget {
@@ -2546,40 +2547,76 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                                   if (p1?.premioNombre != null &&
                                       p1!.premioNombre!.trim().isNotEmpty) ...[
                                     const SizedBox(height: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 3,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.amber.shade100,
+                                    Tooltip(
+                                      message: 'Clic para ver o imprimir distintivo de la pieza premiada',
+                                      child: InkWell(
                                         borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(
-                                          color: Colors.amber.shade600,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.emoji_events,
-                                            size: 14,
-                                            color: Colors.amber.shade900,
+                                        onTap: () {
+                                          final gMap = {
+                                            'premio_nombre': p1.premioNombre,
+                                            'folio_concurso': '${r.folio}A',
+                                            'artesania_nombre': p1.nombre,
+                                            'artesano_nombre': a?.nombre,
+                                            'artesano_paterno': a?.apPaterno,
+                                            'artesano_materno': a?.apMaterno,
+                                            'localidad': a?.localidad,
+                                            'municipio': a?.municipio,
+                                            'rama_nombre': p1.ramaNombre,
+                                            'categoria_nombre': p1.categoriaNombre,
+                                            'subcategoria_nombre': p1.subcategoriaNombre,
+                                            'premio_monto': 0.0,
+                                          };
+                                          showDialog(
+                                            context: context,
+                                            builder: (ctx) => ActaGanadoresDialog(
+                                              concurso: concurso,
+                                              ganadores: [gMap],
+                                              initialType: TipoDocumentoGanadores.distintivos,
+                                            ),
+                                          );
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 3,
                                           ),
-                                          const SizedBox(width: 4),
-                                          Flexible(
-                                            child: Text(
-                                              'Premio: ${p1.premioNombre}',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 11,
-                                                color: Colors.amber.shade900,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
+                                          decoration: BoxDecoration(
+                                            color: Colors.amber.shade100,
+                                            borderRadius: BorderRadius.circular(4),
+                                            border: Border.all(
+                                              color: Colors.amber.shade600,
                                             ),
                                           ),
-                                        ],
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.emoji_events,
+                                                size: 14,
+                                                color: Colors.amber.shade900,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Flexible(
+                                                child: Text(
+                                                  'Premio: ${p1.premioNombre}',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 11,
+                                                    color: Colors.amber.shade900,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Icon(
+                                                Icons.print_outlined,
+                                                size: 13,
+                                                color: Colors.amber.shade900,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -2652,43 +2689,79 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                                         if (p2.premioNombre != null &&
                                             p2.premioNombre!.trim().isNotEmpty) ...[
                                           const SizedBox(height: 6),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 3,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: Colors.amber.shade100,
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                              border: Border.all(
-                                                color: Colors.amber.shade600,
-                                              ),
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Icon(
-                                                  Icons.emoji_events,
-                                                  size: 14,
-                                                  color: Colors.amber.shade900,
+                                          Tooltip(
+                                            message: 'Clic para ver o imprimir distintivo de la pieza premiada',
+                                            child: InkWell(
+                                              borderRadius: BorderRadius.circular(4),
+                                              onTap: () {
+                                                final gMap = {
+                                                  'premio_nombre': p2.premioNombre,
+                                                  'folio_concurso': '${r.folio}B',
+                                                  'artesania_nombre': p2.nombre,
+                                                  'artesano_nombre': a?.nombre,
+                                                  'artesano_paterno': a?.apPaterno,
+                                                  'artesano_materno': a?.apMaterno,
+                                                  'localidad': a?.localidad,
+                                                  'municipio': a?.municipio,
+                                                  'rama_nombre': p2.ramaNombre,
+                                                  'categoria_nombre': p2.categoriaNombre,
+                                                  'subcategoria_nombre': p2.subcategoriaNombre,
+                                                  'premio_monto': 0.0,
+                                                };
+                                                showDialog(
+                                                  context: context,
+                                                  builder: (ctx) => ActaGanadoresDialog(
+                                                    concurso: concurso,
+                                                    ganadores: [gMap],
+                                                    initialType: TipoDocumentoGanadores.distintivos,
+                                                  ),
+                                                );
+                                              },
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 8,
+                                                  vertical: 3,
                                                 ),
-                                                const SizedBox(width: 4),
-                                                Flexible(
-                                                  child: Text(
-                                                    'Premio: ${p2.premioNombre}',
-                                                    style: TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontSize: 11,
-                                                      color: Colors.amber.shade900,
-                                                    ),
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
+                                                decoration: BoxDecoration(
+                                                  color: Colors.amber.shade100,
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
+                                                  border: Border.all(
+                                                    color: Colors.amber.shade600,
                                                   ),
                                                 ),
-                                              ],
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.emoji_events,
+                                                      size: 14,
+                                                      color: Colors.amber.shade900,
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Flexible(
+                                                      child: Text(
+                                                        'Premio: ${p2.premioNombre}',
+                                                        style: TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontSize: 11,
+                                                          color: Colors.amber.shade900,
+                                                        ),
+                                                        maxLines: 1,
+                                                        overflow:
+                                                            TextOverflow.ellipsis,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                    Icon(
+                                                      Icons.print_outlined,
+                                                      size: 13,
+                                                      color: Colors.amber.shade900,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
                                             ),
                                           ),
                                         ],

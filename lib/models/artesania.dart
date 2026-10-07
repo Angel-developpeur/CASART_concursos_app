@@ -43,7 +43,8 @@ class Artesania {
     this.updatedAt,
   });
 
-  Map<String, dynamic> toMap() {
+  /// Mapa para persistencia en tabla SQLite 'artesania_concurso'
+  Map<String, dynamic> toTableMap() {
     return {
       if (id != null) 'id': id,
       'nombre': nombre,
@@ -63,6 +64,34 @@ class Artesania {
       if (updatedAt != null) 'updated_at': updatedAt,
     };
   }
+
+  /// Mapa serializado completo (para JSON de API, respaldos y clientes en red)
+  Map<String, dynamic> toMap() {
+    return {
+      if (id != null) 'id': id,
+      'nombre': nombre,
+      'costo_produccion': costoProduccion,
+      'costo_venta': costoVenta,
+      'estado': estado,
+      'tiempo_elaboracion': tiempoElaboracion,
+      'plazo_elaboracion': plazoElaboracion,
+      'material_elaboracion': materialElaboracion,
+      'descripcion': descripcion,
+      'id_rama_artesanal': idRamaArtesanal,
+      'id_imagen': idImagen,
+      'id_premio': idPremio,
+      'id_categoria_concurso': idCategoriaConcurso,
+      'id_sub_categoria_concurso': idSubCategoriaConcurso,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      // Nombres enriquecidos para que los clientes en red conozcan el premio y catálogos
+      if (ramaNombre != null) 'rama_nombre': ramaNombre,
+      if (categoriaNombre != null) 'categoria_nombre': categoriaNombre,
+      if (subcategoriaNombre != null) 'subcategoria_nombre': subcategoriaNombre,
+      if (premioNombre != null) 'premio_nombre': premioNombre,
+    };
+  }
+
 
   factory Artesania.fromMap(Map<String, dynamic> map, {
     String? ramaNombre,

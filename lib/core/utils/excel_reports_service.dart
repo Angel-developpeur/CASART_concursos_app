@@ -5,8 +5,10 @@ import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import '../database/app_database.dart';
 import '../logging/app_logger.dart';
-import '../theme/app_theme.dart';
 import '../../models/concurso.dart';
+import '../../repositories/premio_repository.dart';
+import '../../repositories/registro_repository.dart';
+import '../theme/app_theme.dart';
 import 'numero_a_letras.dart';
 
 class ExcelReportsService {
@@ -19,62 +21,91 @@ class ExcelReportsService {
   static Future<bool> exportarGanadoresFormatoA({
     required BuildContext context,
     required Concurso concurso,
-    required AppDatabase dbHelper,
+    AppDatabase? dbHelper,
+    PremioRepository? premioRepo,
   }) async {
     try {
-      final db = await dbHelper.database;
+      List<Map<String, dynamic>> categoriasRows = [];
+      List<Map<String, dynamic>> subcategoriasRows = [];
+      List<Map<String, dynamic>> premiaciones = [];
 
       // 1. Obtener categorías y subcategorías
-      final categoriasRows = await db.query(
-        'categoria_concurso',
-        where: 'id_concurso = ?',
-        whereArgs: [concurso.id],
-        orderBy: 'id ASC',
-      );
+      if (concurso.categorias.isNotEmpty) {
+        categoriasRows = concurso.categorias.map((c) => {
+          'id': c.id,
+          'nombre': c.nombre,
+          'id_concurso': c.idConcurso ?? concurso.id,
+        }).toList();
+        subcategoriasRows = concurso.categorias.expand((c) => c.subcategorias).map((s) => {
+          'id': s.id,
+          'nombre': s.nombre,
+          'id_categoria': s.idCategoria,
+        }).toList();
+      }
 
-      final subcategoriasRows = await db.rawQuery('''
-        SELECT s.* FROM sub_categoria_concurso s
-        JOIN categoria_concurso c ON s.id_categoria = c.id
-        WHERE c.id_concurso = ?
-        ORDER BY s.id ASC
-      ''', [concurso.id]);
+      // 2. Obtener todas las premiaciones otorgadas (vía repositorio / API)
+      if (premioRepo != null) {
+        premiaciones = await premioRepo.getGanadoresByConcurso(concurso.id!);
+      }
 
-      // 2. Obtener todas las premiaciones otorgadas
-      final premiaciones = await db.rawQuery('''
-        SELECT 
-          pr.id as premiacion_id,
-          pr.lugar as premiacion_lugar,
-          p.id as premio_id,
-          p.nombre as premio_nombre,
-          p.monto as premio_monto,
-          p.lugar as premio_lugar,
-          p.id_tipo_premio,
-          p.id_categoria as premio_id_categoria,
-          p.id_sub_categoria as premio_id_sub_categoria,
-          a.id as artesania_id,
-          a.nombre as artesania_nombre,
-          a.id_categoria_concurso,
-          a.id_sub_categoria_concurso,
-          r.folio as registro_folio,
-          r.id as registro_id,
-          r.id_artesania_1,
-          r.id_artesania_2,
-          art.nombre as artesano_nombre,
-          art.ap_paterno as artesano_paterno,
-          art.ap_materno as artesano_materno,
-          res.municipio,
-          res.localidad,
-          et.nombre as etnia_nombre
-        FROM premiacion pr
-        JOIN premio p ON pr.id_premio = p.id
-        JOIN artesania_concurso a ON pr.id_artesania = a.id
-        JOIN registro_concurso r ON (r.id_artesania_1 = a.id OR r.id_artesania_2 = a.id)
-        JOIN artesano art ON r.id_artesano = art.id
-        LEFT JOIN residencia res ON art.id_residencia = res.id
-        LEFT JOIN etnia et ON art.id_etnia = et.id
-        WHERE pr.id_concurso = ?
-        ORDER BY p.id_tipo_premio ASC, p.monto DESC, pr.lugar ASC, p.lugar ASC
-      ''', [concurso.id]);
+      // Fallback a base de datos local SQLite si dbHelper fue provisto y falta información
+      if (dbHelper != null && (premiaciones.isEmpty || categoriasRows.isEmpty)) {
+        try {
+          final db = await dbHelper.database;
+          if (categoriasRows.isEmpty) {
+            categoriasRows = await db.query(
+              'categoria_concurso',
+              where: 'id_concurso = ?',
+              whereArgs: [concurso.id],
+              orderBy: 'id ASC',
+            );
+            subcategoriasRows = await db.rawQuery('''
+              SELECT s.* FROM sub_categoria_concurso s
+              JOIN categoria_concurso c ON s.id_categoria = c.id
+              WHERE c.id_concurso = ?
+              ORDER BY s.id ASC
+            ''', [concurso.id]);
+          }
+
+          if (premiaciones.isEmpty) {
+            premiaciones = await db.rawQuery('''
+              SELECT 
+                pr.id as premiacion_id,
+                pr.lugar as premiacion_lugar,
+                p.id as premio_id,
+                p.nombre as premio_nombre,
+                p.monto as premio_monto,
+                p.lugar as premio_lugar,
+                p.id_tipo_premio,
+                p.id_categoria as premio_id_categoria,
+                p.id_sub_categoria as premio_id_sub_categoria,
+                a.id as artesania_id,
+                a.nombre as artesania_nombre,
+                a.id_categoria_concurso,
+                a.id_sub_categoria_concurso,
+                r.folio as registro_folio,
+                r.id as registro_id,
+                r.id_artesania_1,
+                r.id_artesania_2,
+                art.nombre as artesano_nombre,
+                art.ap_paterno as artesano_paterno,
+                art.ap_materno as artesano_materno,
+                res.municipio,
+                res.localidad,
+                et.nombre as etnia_nombre
+              FROM premiacion pr
+              JOIN premio p ON pr.id_premio = p.id
+              JOIN artesania_concurso a ON pr.id_artesania = a.id
+              JOIN registro_concurso r ON (r.id_artesania_1 = a.id OR r.id_artesania_2 = a.id)
+              JOIN artesano art ON r.id_artesano = art.id
+              LEFT JOIN residencia res ON art.id_residencia = res.id
+              LEFT JOIN etnia et ON art.id_etnia = et.id
+              WHERE pr.id_concurso = ?
+              ORDER BY p.id_tipo_premio ASC, p.monto DESC, pr.lugar ASC, p.lugar ASC
+            ''', [concurso.id]);
+          }
+        } catch (_) {}
+      }
 
       if (premiaciones.isEmpty) {
         if (context.mounted) {
@@ -367,65 +398,77 @@ class ExcelReportsService {
   static Future<bool> exportarGanadoresCompletoFormatoB({
     required BuildContext context,
     required Concurso concurso,
-    required AppDatabase dbHelper,
+    AppDatabase? dbHelper,
+    PremioRepository? premioRepo,
   }) async {
     try {
-      final db = await dbHelper.database;
+      List<Map<String, dynamic>> premiaciones = [];
 
-      final premiaciones = await db.rawQuery('''
-        SELECT 
-          pr.id as premiacion_id,
-          pr.lugar as premiacion_lugar,
-          p.id as premio_id,
-          p.nombre as premio_nombre,
-          p.monto as premio_monto,
-          p.lugar as premio_lugar,
-          a.id as artesania_id,
-          a.nombre as artesania_nombre,
-          a.descripcion as artesania_descripcion,
-          a.material_elaboracion,
-          a.tiempo_elaboracion,
-          a.plazo_elaboracion,
-          a.id_categoria_concurso,
-          a.id_sub_categoria_concurso,
-          r.folio as registro_folio,
-          r.id as registro_id,
-          r.id_artesania_1,
-          r.id_artesania_2,
-          art.nombre as artesano_nombre,
-          art.ap_paterno as artesano_paterno,
-          art.ap_materno as artesano_materno,
-          art.genero as artesano_genero,
-          art.curp as artesano_curp,
-          art.fecha_nacimiento as artesano_fecha_nacimiento,
-          art.max_nivel_academico as artesano_escolaridad,
-          res.municipio,
-          res.localidad,
-          res.colonia,
-          res.calle,
-          res.numero_exterior,
-          res.cp,
-          et.nombre as etnia_nombre,
-          ec.nombre as estado_civil_nombre,
-          ic.telefono,
-          cat.nombre as categoria_nombre,
-          sub.nombre as subcategoria_nombre,
-          rama.nombre as rama_nombre
-        FROM premiacion pr
-        JOIN premio p ON pr.id_premio = p.id
-        JOIN artesania_concurso a ON pr.id_artesania = a.id
-        JOIN registro_concurso r ON (r.id_artesania_1 = a.id OR r.id_artesania_2 = a.id)
-        JOIN artesano art ON r.id_artesano = art.id
-        LEFT JOIN residencia res ON art.id_residencia = res.id
-        LEFT JOIN etnia et ON art.id_etnia = et.id
-        LEFT JOIN estado_civil ec ON art.id_estado_civil = ec.id
-        LEFT JOIN info_contacto ic ON art.id_info_contacto = ic.id
-        LEFT JOIN categoria_concurso cat ON a.id_categoria_concurso = cat.id
-        LEFT JOIN sub_categoria_concurso sub ON a.id_sub_categoria_concurso = sub.id
-        LEFT JOIN rama_artesanal rama ON a.id_rama_artesanal = rama.id
-        WHERE pr.id_concurso = ?
-        ORDER BY p.id_tipo_premio ASC, p.monto DESC, pr.lugar ASC, p.lugar ASC
-      ''', [concurso.id]);
+      // 1. Consultar vía repositorio / API central
+      if (premioRepo != null) {
+        premiaciones = await premioRepo.getGanadoresByConcurso(concurso.id!);
+      }
+
+      // Fallback a SQLite local si fue provisto dbHelper y falta data
+      if (premiaciones.isEmpty && dbHelper != null) {
+        try {
+          final db = await dbHelper.database;
+          premiaciones = await db.rawQuery('''
+            SELECT 
+              pr.id as premiacion_id,
+              pr.lugar as premiacion_lugar,
+              p.id as premio_id,
+              p.nombre as premio_nombre,
+              p.monto as premio_monto,
+              p.lugar as premio_lugar,
+              a.id as artesania_id,
+              a.nombre as artesania_nombre,
+              a.descripcion as artesania_descripcion,
+              a.material_elaboracion,
+              a.tiempo_elaboracion,
+              a.plazo_elaboracion,
+              a.id_categoria_concurso,
+              a.id_sub_categoria_concurso,
+              r.folio as registro_folio,
+              r.id as registro_id,
+              r.id_artesania_1,
+              r.id_artesania_2,
+              art.nombre as artesano_nombre,
+              art.ap_paterno as artesano_paterno,
+              art.ap_materno as artesano_materno,
+              art.genero as artesano_genero,
+              art.curp as artesano_curp,
+              art.fecha_nacimiento as artesano_fecha_nacimiento,
+              art.max_nivel_academico as artesano_escolaridad,
+              res.municipio,
+              res.localidad,
+              res.colonia,
+              res.calle,
+              res.numero_exterior,
+              res.cp,
+              et.nombre as etnia_nombre,
+              ec.nombre as estado_civil_nombre,
+              ic.telefono,
+              cat.nombre as categoria_nombre,
+              sub.nombre as subcategoria_nombre,
+              rama.nombre as rama_nombre
+            FROM premiacion pr
+            JOIN premio p ON pr.id_premio = p.id
+            JOIN artesania_concurso a ON pr.id_artesania = a.id
+            JOIN registro_concurso r ON (r.id_artesania_1 = a.id OR r.id_artesania_2 = a.id)
+            JOIN artesano art ON r.id_artesano = art.id
+            LEFT JOIN residencia res ON art.id_residencia = res.id
+            LEFT JOIN etnia et ON art.id_etnia = et.id
+            LEFT JOIN estado_civil ec ON art.id_estado_civil = ec.id
+            LEFT JOIN info_contacto ic ON art.id_info_contacto = ic.id
+            LEFT JOIN categoria_concurso cat ON a.id_categoria_concurso = cat.id
+            LEFT JOIN sub_categoria_concurso sub ON a.id_sub_categoria_concurso = sub.id
+            LEFT JOIN rama_artesanal rama ON a.id_rama_artesanal = rama.id
+            WHERE pr.id_concurso = ?
+            ORDER BY p.id_tipo_premio ASC, p.monto DESC, pr.lugar ASC, p.lugar ASC
+          ''', [concurso.id]);
+        } catch (_) {}
+      }
 
       if (premiaciones.isEmpty) {
         if (context.mounted) {
@@ -691,65 +734,120 @@ class ExcelReportsService {
   static Future<bool> exportarArtesaniasInscritasFormatoC({
     required BuildContext context,
     required Concurso concurso,
-    required AppDatabase dbHelper,
+    AppDatabase? dbHelper,
+    RegistroRepository? registroRepo,
   }) async {
     try {
-      final db = await dbHelper.database;
+      List<Map<String, dynamic>> rows = [];
 
-      final rows = await db.rawQuery('''
-        SELECT 
-          r.id as registro_id,
-          r.folio as folio_boleta,
-          art.id as artesano_id,
-          art.nombre as artesano_nombre,
-          art.ap_paterno as artesano_paterno,
-          art.ap_materno as artesano_materno,
-          art.curp,
-          art.rfc,
-          art.fecha_nacimiento,
-          art.genero,
-          res.municipio,
-          res.localidad,
-          res.colonia,
-          res.calle,
-          res.numero_exterior,
-          res.cp,
-          et.nombre as etnia_nombre,
-          ic.correo,
-          ic.telefono,
-          ic.telefono_emergencia,
-          r.id_artesania_1,
-          r.id_artesania_2,
-          p1.nombre as p1_nombre,
-          p1.costo_produccion as p1_costo_produccion,
-          p1.costo_venta as p1_costo_venta,
-          p1.estado as p1_estado,
-          cat1.nombre as p1_categoria,
-          sub1.nombre as p1_subcategoria,
-          rama1.nombre as p1_rama,
-          p2.nombre as p2_nombre,
-          p2.costo_produccion as p2_costo_produccion,
-          p2.costo_venta as p2_costo_venta,
-          p2.estado as p2_estado,
-          cat2.nombre as p2_categoria,
-          sub2.nombre as p2_subcategoria,
-          rama2.nombre as p2_rama
-        FROM registro_concurso r
-        JOIN artesano art ON r.id_artesano = art.id
-        LEFT JOIN residencia res ON art.id_residencia = res.id
-        LEFT JOIN etnia et ON art.id_etnia = et.id
-        LEFT JOIN info_contacto ic ON art.id_info_contacto = ic.id
-        LEFT JOIN artesania_concurso p1 ON r.id_artesania_1 = p1.id
-        LEFT JOIN categoria_concurso cat1 ON p1.id_categoria_concurso = cat1.id
-        LEFT JOIN sub_categoria_concurso sub1 ON p1.id_sub_categoria_concurso = sub1.id
-        LEFT JOIN rama_artesanal rama1 ON p1.id_rama_artesanal = rama1.id
-        LEFT JOIN artesania_concurso p2 ON r.id_artesania_2 = p2.id
-        LEFT JOIN categoria_concurso cat2 ON p2.id_categoria_concurso = cat2.id
-        LEFT JOIN sub_categoria_concurso sub2 ON p2.id_sub_categoria_concurso = sub2.id
-        LEFT JOIN rama_artesanal rama2 ON p2.id_rama_artesanal = rama2.id
-        WHERE r.id_concurso = ?
-        ORDER BY r.folio ASC
-      ''', [concurso.id]);
+      // 1. Consultar vía repositorio / API central
+      if (registroRepo != null) {
+        final registros = await registroRepo.getRegistrosByConcurso(concurso.id!);
+        rows = registros.map((r) {
+          final a = r.artesano;
+          final p1 = r.artesania1;
+          final p2 = r.artesania2;
+          return {
+            'registro_id': r.id,
+            'folio_boleta': r.folio,
+            'artesano_id': a?.id,
+            'artesano_nombre': a?.nombre,
+            'artesano_paterno': a?.apPaterno,
+            'artesano_materno': a?.apMaterno,
+            'curp': a?.curp,
+            'rfc': a?.rfc,
+            'fecha_nacimiento': a?.fechaNacimiento,
+            'genero': a?.genero,
+            'municipio': a?.municipio,
+            'localidad': a?.localidad,
+            'colonia': a?.colonia,
+            'calle': a?.calle,
+            'numero_exterior': a?.numeroExterior,
+            'cp': a?.cp,
+            'etnia_nombre': a?.etniaNombre,
+            'correo': a?.correo,
+            'telefono': a?.telefono,
+            'telefono_emergencia': a?.telefonoEmergencia,
+            'id_artesania_1': r.idArtesania1,
+            'id_artesania_2': r.idArtesania2,
+            'p1_nombre': p1?.nombre,
+            'p1_costo_produccion': p1?.costoProduccion,
+            'p1_costo_venta': p1?.costoVenta,
+            'p1_estado': p1?.estado,
+            'p1_categoria': p1?.categoriaNombre,
+            'p1_subcategoria': p1?.subcategoriaNombre,
+            'p1_rama': p1?.ramaNombre,
+            'p2_nombre': p2?.nombre,
+            'p2_costo_produccion': p2?.costoProduccion,
+            'p2_costo_venta': p2?.costoVenta,
+            'p2_estado': p2?.estado,
+            'p2_categoria': p2?.categoriaNombre,
+            'p2_subcategoria': p2?.subcategoriaNombre,
+            'p2_rama': p2?.ramaNombre,
+          };
+        }).toList();
+      }
+
+      // Fallback a SQLite local si fue provisto dbHelper y falta data
+      if (rows.isEmpty && dbHelper != null) {
+        try {
+          final db = await dbHelper.database;
+          rows = await db.rawQuery('''
+            SELECT 
+              r.id as registro_id,
+              r.folio as folio_boleta,
+              art.id as artesano_id,
+              art.nombre as artesano_nombre,
+              art.ap_paterno as artesano_paterno,
+              art.ap_materno as artesano_materno,
+              art.curp,
+              art.rfc,
+              art.fecha_nacimiento,
+              art.genero,
+              res.municipio,
+              res.localidad,
+              res.colonia,
+              res.calle,
+              res.numero_exterior,
+              res.cp,
+              et.nombre as etnia_nombre,
+              ic.correo,
+              ic.telefono,
+              ic.telefono_emergencia,
+              r.id_artesania_1,
+              r.id_artesania_2,
+              p1.nombre as p1_nombre,
+              p1.costo_produccion as p1_costo_produccion,
+              p1.costo_venta as p1_costo_venta,
+              p1.estado as p1_estado,
+              cat1.nombre as p1_categoria,
+              sub1.nombre as p1_subcategoria,
+              rama1.nombre as p1_rama,
+              p2.nombre as p2_nombre,
+              p2.costo_produccion as p2_costo_produccion,
+              p2.costo_venta as p2_costo_venta,
+              p2.estado as p2_estado,
+              cat2.nombre as p2_categoria,
+              sub2.nombre as p2_subcategoria,
+              rama2.nombre as p2_rama
+            FROM registro_concurso r
+            JOIN artesano art ON r.id_artesano = art.id
+            LEFT JOIN residencia res ON art.id_residencia = res.id
+            LEFT JOIN etnia et ON art.id_etnia = et.id
+            LEFT JOIN info_contacto ic ON art.id_info_contacto = ic.id
+            LEFT JOIN artesania_concurso p1 ON r.id_artesania_1 = p1.id
+            LEFT JOIN categoria_concurso cat1 ON p1.id_categoria_concurso = cat1.id
+            LEFT JOIN sub_categoria_concurso sub1 ON p1.id_sub_categoria_concurso = sub1.id
+            LEFT JOIN rama_artesanal rama1 ON p1.id_rama_artesanal = rama1.id
+            LEFT JOIN artesania_concurso p2 ON r.id_artesania_2 = p2.id
+            LEFT JOIN categoria_concurso cat2 ON p2.id_categoria_concurso = cat2.id
+            LEFT JOIN sub_categoria_concurso sub2 ON p2.id_sub_categoria_concurso = sub2.id
+            LEFT JOIN rama_artesanal rama2 ON p2.id_rama_artesanal = rama2.id
+            WHERE r.id_concurso = ?
+            ORDER BY r.folio ASC
+          ''', [concurso.id]);
+        } catch (_) {}
+      }
 
       if (rows.isEmpty) {
         if (context.mounted) {
@@ -975,45 +1073,83 @@ class ExcelReportsService {
   static Future<bool> exportarArtesaniasResumenFormatoD({
     required BuildContext context,
     required Concurso concurso,
-    required AppDatabase dbHelper,
+    AppDatabase? dbHelper,
+    RegistroRepository? registroRepo,
   }) async {
     try {
-      final db = await dbHelper.database;
+      List<Map<String, dynamic>> rows = [];
 
-      final rows = await db.rawQuery('''
-        SELECT 
-          r.id as registro_id,
-          r.folio as folio_boleta,
-          art.nombre as artesano_nombre,
-          art.ap_paterno as artesano_paterno,
-          art.ap_materno as artesano_materno,
-          r.id_artesania_1,
-          r.id_artesania_2,
-          p1.nombre as p1_nombre,
-          p1.costo_produccion as p1_costo_produccion,
-          p1.costo_venta as p1_costo_venta,
-          cat1.nombre as p1_categoria,
-          sub1.nombre as p1_subcategoria,
-          rama1.nombre as p1_rama,
-          p2.nombre as p2_nombre,
-          p2.costo_produccion as p2_costo_produccion,
-          p2.costo_venta as p2_costo_venta,
-          cat2.nombre as p2_categoria,
-          sub2.nombre as p2_subcategoria,
-          rama2.nombre as p2_rama
-        FROM registro_concurso r
-        JOIN artesano art ON r.id_artesano = art.id
-        LEFT JOIN artesania_concurso p1 ON r.id_artesania_1 = p1.id
-        LEFT JOIN categoria_concurso cat1 ON p1.id_categoria_concurso = cat1.id
-        LEFT JOIN sub_categoria_concurso sub1 ON p1.id_sub_categoria_concurso = sub1.id
-        LEFT JOIN rama_artesanal rama1 ON p1.id_rama_artesanal = rama1.id
-        LEFT JOIN artesania_concurso p2 ON r.id_artesania_2 = p2.id
-        LEFT JOIN categoria_concurso cat2 ON p2.id_categoria_concurso = cat2.id
-        LEFT JOIN sub_categoria_concurso sub2 ON p2.id_sub_categoria_concurso = sub2.id
-        LEFT JOIN rama_artesanal rama2 ON p2.id_rama_artesanal = rama2.id
-        WHERE r.id_concurso = ?
-        ORDER BY r.folio ASC
-      ''', [concurso.id]);
+      // 1. Consultar vía repositorio / API central
+      if (registroRepo != null) {
+        final registros = await registroRepo.getRegistrosByConcurso(concurso.id!);
+        rows = registros.map((r) {
+          final a = r.artesano;
+          final p1 = r.artesania1;
+          final p2 = r.artesania2;
+          return {
+            'registro_id': r.id,
+            'folio_boleta': r.folio,
+            'artesano_nombre': a?.nombre,
+            'artesano_paterno': a?.apPaterno,
+            'artesano_materno': a?.apMaterno,
+            'id_artesania_1': r.idArtesania1,
+            'id_artesania_2': r.idArtesania2,
+            'p1_nombre': p1?.nombre,
+            'p1_costo_produccion': p1?.costoProduccion,
+            'p1_costo_venta': p1?.costoVenta,
+            'p1_categoria': p1?.categoriaNombre,
+            'p1_subcategoria': p1?.subcategoriaNombre,
+            'p1_rama': p1?.ramaNombre,
+            'p2_nombre': p2?.nombre,
+            'p2_costo_produccion': p2?.costoProduccion,
+            'p2_costo_venta': p2?.costoVenta,
+            'p2_categoria': p2?.categoriaNombre,
+            'p2_subcategoria': p2?.subcategoriaNombre,
+            'p2_rama': p2?.ramaNombre,
+          };
+        }).toList();
+      }
+
+      // Fallback a SQLite local si fue provisto dbHelper y falta data
+      if (rows.isEmpty && dbHelper != null) {
+        try {
+          final db = await dbHelper.database;
+          rows = await db.rawQuery('''
+            SELECT 
+              r.id as registro_id,
+              r.folio as folio_boleta,
+              art.nombre as artesano_nombre,
+              art.ap_paterno as artesano_paterno,
+              art.ap_materno as artesano_materno,
+              r.id_artesania_1,
+              r.id_artesania_2,
+              p1.nombre as p1_nombre,
+              p1.costo_produccion as p1_costo_produccion,
+              p1.costo_venta as p1_costo_venta,
+              cat1.nombre as p1_categoria,
+              sub1.nombre as p1_subcategoria,
+              rama1.nombre as p1_rama,
+              p2.nombre as p2_nombre,
+              p2.costo_produccion as p2_costo_produccion,
+              p2.costo_venta as p2_costo_venta,
+              cat2.nombre as p2_categoria,
+              sub2.nombre as p2_subcategoria,
+              rama2.nombre as p2_rama
+            FROM registro_concurso r
+            JOIN artesano art ON r.id_artesano = art.id
+            LEFT JOIN artesania_concurso p1 ON r.id_artesania_1 = p1.id
+            LEFT JOIN categoria_concurso cat1 ON p1.id_categoria_concurso = cat1.id
+            LEFT JOIN sub_categoria_concurso sub1 ON p1.id_sub_categoria_concurso = sub1.id
+            LEFT JOIN rama_artesanal rama1 ON p1.id_rama_artesanal = rama1.id
+            LEFT JOIN artesania_concurso p2 ON r.id_artesania_2 = p2.id
+            LEFT JOIN categoria_concurso cat2 ON p2.id_categoria_concurso = cat2.id
+            LEFT JOIN sub_categoria_concurso sub2 ON p2.id_sub_categoria_concurso = sub2.id
+            LEFT JOIN rama_artesanal rama2 ON p2.id_rama_artesanal = rama2.id
+            WHERE r.id_concurso = ?
+            ORDER BY r.folio ASC
+          ''', [concurso.id]);
+        } catch (_) {}
+      }
 
       if (rows.isEmpty) {
         if (context.mounted) {

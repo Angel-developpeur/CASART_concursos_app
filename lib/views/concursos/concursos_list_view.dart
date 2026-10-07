@@ -6,6 +6,7 @@ import '../../providers/database_provider.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/theme/app_theme.dart';
 import 'concurso_form_dialog.dart';
+import 'dialogo_autorizacion_concurso.dart';
 import 'estadisticas_concurso_view.dart';
 
 class ConcursosListView extends ConsumerWidget {
@@ -295,7 +296,7 @@ class ConcursosListView extends ConsumerWidget {
                                               avatar: const Icon(Icons.check_circle, size: 15, color: Colors.white),
                                               label: const Text('Finalizado', style: TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
                                               backgroundColor: Colors.blueGrey.shade600,
-                                              tooltip: 'Clic para reabrir concurso (Poner En Proceso)',
+                                              tooltip: 'Clic para reabrir concurso (Requiere clave)',
                                               visualDensity: VisualDensity.compact,
                                               onPressed: () => _confirmToggleFinalizado(context, ref, c),
                                             )
@@ -305,7 +306,7 @@ class ConcursosListView extends ConsumerWidget {
                                               label: const Text('En Proceso', style: TextStyle(fontSize: 11, color: AppTheme.verdeSuccess, fontWeight: FontWeight.bold)),
                                               backgroundColor: AppTheme.verdeLight,
                                               side: const BorderSide(color: AppTheme.verdeBorder),
-                                              tooltip: 'Clic para marcar concurso como Finalizado',
+                                              tooltip: 'Clic para marcar concurso como Finalizado (Requiere clave)',
                                               visualDensity: VisualDensity.compact,
                                               onPressed: () => _confirmToggleFinalizado(context, ref, c),
                                             ),
@@ -407,8 +408,8 @@ class ConcursosListView extends ConsumerWidget {
                                             color: c.finalizado ? Colors.orange.shade700 : AppTheme.verdeSuccess,
                                           ),
                                           tooltip: c.finalizado
-                                              ? 'Reabrir Concurso (Poner En Proceso)'
-                                              : 'Marcar como Finalizado',
+                                              ? 'Reabrir Concurso (Requiere clave)'
+                                              : 'Marcar como Finalizado (Requiere clave)',
                                           onPressed: () => _confirmToggleFinalizado(context, ref, c),
                                         ),
                                         IconButton(
@@ -444,56 +445,10 @@ class ConcursosListView extends ConsumerWidget {
 
   Future<void> _confirmToggleFinalizado(BuildContext context, WidgetRef ref, Concurso c) async {
     final willFinalize = !c.finalizado;
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(
-              willFinalize ? Icons.task_alt : Icons.replay,
-              color: willFinalize ? AppTheme.casart800 : Colors.orange,
-              size: 26,
-            ),
-            const SizedBox(width: 12),
-            Text(willFinalize ? 'Finalizar Concurso' : 'Reabrir Concurso'),
-          ],
-        ),
-        content: SizedBox(
-          width: 440,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Concurso: "${c.nombre}"',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                willFinalize
-                    ? '¿Deseas marcar este concurso como FINALIZADO?\n\nEsto indicará que el periodo de inscripciones y evaluación ha concluido formalmente. Podrás consultar sus datos y reportes en cualquier momento o reabrirlo si se requiere.'
-                    : '¿Deseas cambiar el estatus de este concurso a "EN PROCESO"?\n\nEl concurso volverá a estar abierto para el registro de piezas y captura.',
-                style: const TextStyle(fontSize: 13, height: 1.4),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            style: AppTheme.cancelButtonStyle,
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            style: AppTheme.acceptButtonStyle,
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              willFinalize ? 'Marcar Finalizado' : 'Reabrir Concurso',
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
+    final confirm = await DialogoAutorizacionConcurso.mostrar(
+      context,
+      concursoNombre: c.nombre,
+      willFinalize: willFinalize,
     );
 
     if (confirm == true) {
