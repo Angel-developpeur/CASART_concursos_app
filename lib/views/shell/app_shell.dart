@@ -237,7 +237,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        'v1.0.7\nAngel developpeur',
+                        'v1.0.8\nAngel developpeur',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.white54, fontSize: 10),
                       ),

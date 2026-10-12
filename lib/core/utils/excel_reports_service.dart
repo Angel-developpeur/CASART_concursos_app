@@ -17,7 +17,7 @@ class ExcelReportsService {
   static final ExcelColor _colorGrisGrupo = ExcelColor.fromHexString('#E5E7EB');
   static final ExcelColor _colorTextoOscuro = ExcelColor.fromHexString('#1F2937');
 
-  /// Exporta el Formato A: Ganadores agrupados por Galardones, Especiales y Categorías
+  /// Exporta el Formato A: Ganadores agrupados primero por Categorías (Premios Comunes), seguidos de Galardones y Especiales
   static Future<bool> exportarGanadoresFormatoA({
     required BuildContext context,
     required Concurso concurso,
@@ -247,25 +247,7 @@ class ExcelReportsService {
         currentRow++;
       }
 
-      // 4.1 Galardones (id_tipo_premio = 1)
-      final galardones = premiaciones.where((p) => p['id_tipo_premio'] == 1).toList();
-      if (galardones.isNotEmpty) {
-        addGroupHeader('GALARDONES');
-        for (final p in galardones) {
-          addWinnerRow(p);
-        }
-      }
-
-      // 4.2 Premios Especiales (id_tipo_premio = 2)
-      final especiales = premiaciones.where((p) => p['id_tipo_premio'] == 2).toList();
-      if (especiales.isNotEmpty) {
-        addGroupHeader('PREMIOS ESPECIALES');
-        for (final p in especiales) {
-          addWinnerRow(p);
-        }
-      }
-
-      // 4.3 Premios Comunes (id_tipo_premio = 3) agrupados por Categoría y Subcategoría
+      // 4.1 Premios Comunes (id_tipo_premio = 3) agrupados por Categoría y Subcategoría
       final comunes = premiaciones.where((p) => p['id_tipo_premio'] == 3).toList();
       int catCounter = 0;
 
@@ -320,7 +302,7 @@ class ExcelReportsService {
           for (final sub in catSubs) {
             final subId = sub['id'] as int;
             final rawSubNombre = sub['nombre']?.toString().trim() ?? 'Subcategoría';
-            final subNombre = rawSubNombre.replaceFirst(RegExp(r'^[a-z]\.\d+\s*'), '');
+            final subNombre = rawSubNombre.replaceFirst(RegExp(r'^[a-zA-Z]\.\d+\s*'), '');
 
             final subWinners = comunes.where((p) {
               final pCatId = p['premio_id_categoria'] ?? p['id_categoria_concurso'];
@@ -330,7 +312,7 @@ class ExcelReportsService {
 
             if (subWinners.isNotEmpty) {
               final subCode = '$catLetterLower.$subCounter';
-              addGroupHeader('$catLetter. ${catNombre.toUpperCase()} $subCode ${subNombre.toUpperCase()}');
+              addGroupHeader('$catLetter. ${catNombre.toUpperCase()} $subCode $subNombre');
               for (final p in subWinners) {
                 addWinnerRow(p);
               }
@@ -367,11 +349,38 @@ class ExcelReportsService {
         }
       }
 
-      // 4.4 Premios comunes restantes sin categoría
+      // 4.2 Premios comunes restantes sin categoría
       final unassigned = comunes.where((p) => !assignedPremiacionIds.contains(p['premiacion_id'])).toList();
       if (unassigned.isNotEmpty) {
         addGroupHeader('PREMIOS COMUNES - GENERAL');
         for (final p in unassigned) {
+          addWinnerRow(p);
+        }
+      }
+
+      // 4.3 Galardones (id_tipo_premio = 1)
+      final galardones = premiaciones.where((p) => p['id_tipo_premio'] == 1).toList();
+      if (galardones.isNotEmpty) {
+        addGroupHeader('GALARDONES');
+        for (final p in galardones) {
+          addWinnerRow(p);
+        }
+      }
+
+      // 4.4 Premios Especiales (id_tipo_premio = 2)
+      final especiales = premiaciones.where((p) => p['id_tipo_premio'] == 2).toList();
+      if (especiales.isNotEmpty) {
+        addGroupHeader('PREMIOS ESPECIALES');
+        for (final p in especiales) {
+          addWinnerRow(p);
+        }
+      }
+
+      // 4.5 Otros premios restantes si los hubiera
+      final otrosRestantes = premiaciones.where((p) => !assignedPremiacionIds.contains(p['premiacion_id'])).toList();
+      if (otrosRestantes.isNotEmpty) {
+        addGroupHeader('OTROS PREMIOS');
+        for (final p in otrosRestantes) {
           addWinnerRow(p);
         }
       }

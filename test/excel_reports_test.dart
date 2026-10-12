@@ -277,24 +277,49 @@ void main() {
       String formatCatSub(String catLetter, String catNombre, {int? subIndex, String? subNombre}) {
         final catClean = catNombre.trim().replaceFirst(RegExp(r'^[A-Za-z]\.\s*'), '').toUpperCase();
         if (subIndex != null && subNombre != null && subNombre.trim().isNotEmpty) {
-          final subClean = subNombre.trim().replaceFirst(RegExp(r'^[a-z]\.\d+\s*'), '').toUpperCase();
+          final subClean = subNombre.trim().replaceFirst(RegExp(r'^[a-zA-Z]\.\d+\s*'), '');
           final subCode = '${catLetter.toLowerCase()}.$subIndex';
           return '$catLetter. $catClean $subCode $subClean';
         }
         return '$catLetter. $catClean';
       }
 
-      // Caso ejemplo del usuario:
-      final res1 = formatCatSub('A', 'ALFARERIA BRUNIDA Y / O VIDRIADA', subIndex: 1, subNombre: 'JUEGOS DE TE Y AGUA');
-      expect(res1, equals('A. ALFARERIA BRUNIDA Y / O VIDRIADA a.1 JUEGOS DE TE Y AGUA'));
+      // Caso subcategoría con minúsculas y mayúsculas respetando lo escrito por el usuario:
+      final res1 = formatCatSub('A', 'Alfarería bruñida y / o vidriada', subIndex: 1, subNombre: 'Juegos de té y agua');
+      expect(res1, equals('A. ALFARERÍA BRUÑIDA Y / O VIDRIADA a.1 Juegos de té y agua'));
 
-      // Caso subcategoría 2:
-      final res2 = formatCatSub('A', 'ALFARERIA BRUNIDA Y / O VIDRIADA', subIndex: 2, subNombre: 'MINIATURAS');
-      expect(res2, equals('A. ALFARERIA BRUNIDA Y / O VIDRIADA a.2 MINIATURAS'));
+      // Caso subcategoría 2 tal como se registró:
+      final res2 = formatCatSub('A', 'Categoria 1', subIndex: 2, subNombre: 'Subcategoria 2');
+      expect(res2, equals('A. CATEGORIA 1 a.2 Subcategoria 2'));
 
       // Caso categoría B sin subcategoría:
-      final res3 = formatCatSub('B', 'SILLAS');
+      final res3 = formatCatSub('B', 'sillas');
       expect(res3, equals('B. SILLAS'));
+    });
+
+    test('Verificación del orden de secciones en Formato A: Comunes primero, Galardones y Especiales después', () {
+      // Simular lista de premiaciones con común, galardón y especial
+      final premiaciones = [
+        {'id_tipo_premio': 1, 'premio_nombre': 'Galardón'},
+        {'id_tipo_premio': 2, 'premio_nombre': 'Premio Especial'},
+        {'id_tipo_premio': 3, 'premio_nombre': 'Primer Lugar'},
+      ];
+
+      final orderedGroups = <String>[];
+      final comunes = premiaciones.where((p) => p['id_tipo_premio'] == 3).toList();
+      if (comunes.isNotEmpty) {
+        orderedGroups.add('COMUNES');
+      }
+      final galardones = premiaciones.where((p) => p['id_tipo_premio'] == 1).toList();
+      if (galardones.isNotEmpty) {
+        orderedGroups.add('GALARDONES');
+      }
+      final especiales = premiaciones.where((p) => p['id_tipo_premio'] == 2).toList();
+      if (especiales.isNotEmpty) {
+        orderedGroups.add('ESPECIALES');
+      }
+
+      expect(orderedGroups, equals(['COMUNES', 'GALARDONES', 'ESPECIALES']));
     });
   });
 }

@@ -17,6 +17,7 @@ import 'editar_inscripcion_dialog.dart';
 import 'premiar_pieza_dialog.dart';
 import '../premios/acta_ganadores_dialog.dart';
 import '../common/excel_export_dropdown.dart';
+import '../common/searchable_select_form_field.dart';
 
 class InscripcionView extends ConsumerStatefulWidget {
   const InscripcionView({super.key});
@@ -1398,29 +1399,22 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Selector de Municipio
+                        // Selector de Municipio con Búsqueda
                         Expanded(
-                          child: DropdownButtonFormField<String?>(
+                          child: SearchableSelectFormField(
                             key: ValueKey('art_mun_$_artMunicipio'),
-                            initialValue: _artMunicipio,
-                            isExpanded: true,
-                            menuMaxHeight: 350,
-                            decoration: const InputDecoration(
-                              labelText: 'Municipio *',
-                              prefixIcon: Icon(Icons.location_city_outlined),
-                            ),
-                            hint: const Text('Selecciona un municipio'),
-                            items: MunicipiosData.municipios
-                                .map(
-                                  (mun) => DropdownMenuItem<String?>(
-                                    value: mun,
-                                    child: Text(
-                                      mun,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                )
-                                .toList(),
+                            value: _artMunicipio,
+                            items: [
+                              ...MunicipiosData.municipios,
+                              if (_artMunicipio != null &&
+                                  _artMunicipio!.trim().isNotEmpty &&
+                                  !MunicipiosData.municipios.contains(_artMunicipio))
+                                _artMunicipio!,
+                            ],
+                            labelText: 'Municipio *',
+                            prefixIcon: Icons.location_city_outlined,
+                            searchTitle: 'Buscar Municipio',
+                            searchHint: 'Escribe una letra o nombre del municipio...',
                             validator: (v) =>
                                 _esNuevoArtesano &&
                                     (v == null || v.trim().isEmpty)
@@ -1437,7 +1431,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                           ),
                         ),
                         const SizedBox(width: 12),
-                        // Selector de Localidad dependiente
+                        // Selector de Localidad dependiente con Búsqueda
                         Expanded(
                           child: Builder(
                             builder: (context) {
@@ -1455,41 +1449,25 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                                   _artLocalidad!,
                               ];
 
-                              return DropdownButtonFormField<String?>(
+                              return SearchableSelectFormField(
                                 key: ValueKey(
                                   'art_loc_${_artMunicipio}_$_artLocalidad',
                                 ),
-                                initialValue: _artLocalidad,
-                                isExpanded: true,
-                                menuMaxHeight: 350,
-                                decoration: InputDecoration(
-                                  labelText: 'Localidad *',
-                                  prefixIcon: const Icon(Icons.place_outlined),
-                                  helperText: hasMun
-                                      ? null
-                                      : 'Primero selecciona un municipio',
-                                ),
-                                hint: Text(
-                                  hasMun
-                                      ? 'Selecciona una localidad'
-                                      : 'Selecciona un municipio primero',
-                                ),
-                                disabledHint: const Text(
-                                  'Selecciona un municipio primero',
-                                ),
-                                items: !hasMun
+                                value: _artLocalidad,
+                                items: items,
+                                labelText: 'Localidad *',
+                                prefixIcon: Icons.place_outlined,
+                                helperText: hasMun
                                     ? null
-                                    : items
-                                          .map(
-                                            (loc) => DropdownMenuItem<String?>(
-                                              value: loc,
-                                              child: Text(
-                                                loc,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          )
-                                          .toList(),
+                                    : 'Primero selecciona un municipio',
+                                enabled: hasMun,
+                                searchTitle: 'Buscar Localidad',
+                                searchSubtitle: _artMunicipio != null
+                                    ? 'Municipio: $_artMunicipio'
+                                    : null,
+                                searchHint: 'Escribe una letra o nombre de la localidad...',
+                                allowCustomValue: true,
+                                customValueLabel: 'localidad',
                                 validator: (v) =>
                                     _esNuevoArtesano &&
                                         (v == null || v.trim().isEmpty)
