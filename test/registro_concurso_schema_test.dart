@@ -276,5 +276,107 @@ void main() {
       expect(row['created_at'], equals('2026-09-20 12:00:00'));
       expect(row['updated_at'], isNotNull);
     });
+
+    test('Impide registrar al mismo artesano más de una vez en el mismo concurso por CURP', () async {
+      final db = await databaseFactoryFfi.openDatabase(
+        inMemoryDatabasePath,
+        options: OpenDatabaseOptions(
+          version: 10,
+          onCreate: AppDatabase().onCreate,
+          onUpgrade: AppDatabase().onUpgrade,
+          onConfigure: (db) async {
+            await db.execute('PRAGMA foreign_keys = ON');
+          },
+        ),
+      );
+
+      final dbHelper = AppDatabase.withDatabase(db);
+      final concursoRepo = ConcursoRepository(dbHelper: dbHelper);
+      final registroRepo = RegistroRepository(dbHelper: dbHelper);
+
+      final c1Id = await concursoRepo.createConcurso(
+        Concurso(
+          nombre: 'Concurso A',
+          idTipoConcurso: 1,
+          categorias: [Categoria(nombre: 'Textiles')],
+        ),
+      );
+      final c2Id = await concursoRepo.createConcurso(
+        Concurso(
+          nombre: 'Concurso B',
+          idTipoConcurso: 1,
+          categorias: [Categoria(nombre: 'Alfarería')],
+        ),
+      );
+
+      final c1 = await concursoRepo.getConcursoById(c1Id);
+      final cat1Id = c1!.categorias.first.id!;
+
+      final c2 = await concursoRepo.getConcursoById(c2Id);
+      final cat2Id = c2!.categorias.first.id!;
+
+      final artesano = Artesano(
+        nombre: 'Guadalupe',
+        apPaterno: 'Pérez',
+        curp: 'PERG850505MNZRRP01',
+        municipio: 'Pátzcuaro',
+        localidad: 'Pátzcuaro',
+      );
+
+      final pieza1 = Artesania(
+        nombre: 'Pieza Uno',
+        descripcion: 'Descripción pieza',
+        costoProduccion: 500.0,
+        costoVenta: 1000.0,
+        tiempoElaboracion: 5.0,
+        plazoElaboracion: 'dias',
+        materialElaboracion: 'Lana',
+        idRamaArtesanal: 2,
+        idCategoriaConcurso: cat1Id,
+      );
+
+      // 1. Primera inscripción en Concurso A debe ser exitosa con Folio 1
+      final reg1 = await registroRepo.registrarInscripcion(
+        idConcurso: c1Id,
+        artesano: artesano,
+        esNuevoArtesano: true,
+        pieza1: pieza1,
+      );
+      expect(reg1.folio, equals(1));
+
+      // 2. getRegistroByCurp encuentra la inscripción
+      final buscado = await registroRepo.getRegistroByCurp(
+        idConcurso: c1Id,
+        curp: 'PERG850505MNZRRP01',
+      );
+      expect(buscado, isNotNull);
+      expect(buscado!.folio, equals(1));
+
+      // 3. Intentar registrar de nuevo al mismo artesano en Concurso A debe fallar con StateError
+      expect(
+        () => registroRepo.registrarInscripcion(
+          idConcurso: c1Id,
+          artesano: artesano,
+          esNuevoArtesano: false,
+          pieza1: pieza1.copyWith(nombre: 'Pieza Dos'),
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            contains('ya está inscrito en este concurso con el folio de la boleta #1'),
+          ),
+        ),
+      );
+
+      // 4. En un concurso distinto (Concurso B), sí se permite registrar al artesano
+      final regC2 = await registroRepo.registrarInscripcion(
+        idConcurso: c2Id,
+        artesano: artesano,
+        esNuevoArtesano: false,
+        pieza1: pieza1.copyWith(idCategoriaConcurso: cat2Id),
+      );
+      expect(regC2.folio, equals(1));
+    });
   });
 }

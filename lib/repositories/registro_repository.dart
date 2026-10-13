@@ -56,6 +56,36 @@ class RegistroRepository {
           );
         }
 
+        // 0.1 Validar que el artesano no esté ya registrado en este concurso (Validación por CURP)
+        final curpLimpia = artesano.curp.trim().toUpperCase();
+        List<Map<String, Object?>> yaInscrito = [];
+        if (curpLimpia.isNotEmpty) {
+          yaInscrito = await txn.rawQuery('''
+            SELECT r.folio
+            FROM registro_concurso r
+            JOIN artesano a ON r.id_artesano = a.id
+            WHERE r.id_concurso = ? AND (
+              UPPER(TRIM(a.curp)) = ?
+              ${artesano.id != null ? 'OR r.id_artesano = ${artesano.id}' : ''}
+            )
+            LIMIT 1
+          ''', [idConcurso, curpLimpia]);
+        } else if (artesano.id != null) {
+          yaInscrito = await txn.rawQuery('''
+            SELECT r.folio
+            FROM registro_concurso r
+            WHERE r.id_concurso = ? AND r.id_artesano = ?
+            LIMIT 1
+          ''', [idConcurso, artesano.id]);
+        }
+
+        if (yaInscrito.isNotEmpty) {
+          final folioExistente = yaInscrito.first['folio'];
+          throw StateError(
+            'Este artesano ya está inscrito en este concurso con el folio de la boleta #$folioExistente.',
+          );
+        }
+
         // 1. Resolver el ID del artesano
         int artesanoId;
         if (esNuevoArtesano || artesano.id == null) {
@@ -374,6 +404,39 @@ class RegistroRepository {
     }
 
     return registros;
+  }
+
+  Future<RegistroConcurso?> getRegistroByCurp({
+    required int idConcurso,
+    required String curp,
+  }) async {
+    final curpLimpia = curp.trim().toUpperCase();
+    if (curpLimpia.isEmpty) return null;
+
+    if (apiClient != null) {
+      final list = await apiClient!.getRegistros(idConcurso, search: curpLimpia);
+      for (final r in list) {
+        if (r.artesano != null &&
+            r.artesano!.curp.trim().toUpperCase() == curpLimpia) {
+          return r;
+        }
+      }
+      return null;
+    }
+
+    final db = await _dbHelper.database;
+    final rows = await db.rawQuery('''
+      SELECT r.id
+      FROM registro_concurso r
+      JOIN artesano a ON r.id_artesano = a.id
+      WHERE r.id_concurso = ? AND UPPER(TRIM(a.curp)) = ?
+      LIMIT 1
+    ''', [idConcurso, curpLimpia]);
+
+    if (rows.isEmpty) return null;
+
+    final idRegistro = rows.first['id'] as int;
+    return await getRegistroById(idRegistro);
   }
 
   Future<RegistroConcurso?> getRegistroById(int id) async {

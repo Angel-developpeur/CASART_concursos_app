@@ -223,7 +223,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
     }
   }
 
-  void _autocompletarDesdeCurp(String rawCurp) {
+  void _autocompletarDesdeCurp(String rawCurp, Concurso concurso) {
     final curp = rawCurp.trim().toUpperCase();
     if (curp.length >= 10) {
       try {
@@ -260,7 +260,23 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
             setState(() => _artGenero = 'M');
           }
         }
+
+        if (curp.length == 18) {
+          _verificarCurpEnConcurso(curp, concurso);
+        }
       } catch (_) {}
+    }
+  }
+
+  Future<void> _verificarCurpEnConcurso(String curp, Concurso concurso) async {
+    if (concurso.id == null) return;
+    final regRepo = ref.read(registroRepositoryProvider);
+    final regExistente = await regRepo.getRegistroByCurp(
+      idConcurso: concurso.id!,
+      curp: curp,
+    );
+    if (regExistente != null && mounted) {
+      await _mostrarAlertaArtesanoYaInscrito(regExistente, concurso);
     }
   }
 
@@ -269,7 +285,163 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
     return costoProd * factor;
   }
 
-  Future<void> _buscarArtesano(String query) async {
+  Future<void> _mostrarAlertaArtesanoYaInscrito(
+    RegistroConcurso registroExistente,
+    Concurso concurso,
+  ) async {
+    final folio = registroExistente.folio;
+    final nombre =
+        registroExistente.artesano?.nombreCompleto ?? 'El artesano';
+    final curp = registroExistente.artesano?.curp ?? '';
+    final tieneP2 = registroExistente.artesania2 != null;
+    final p1Nombre = registroExistente.artesania1?.nombre ?? 'Pieza 1';
+    final p2Nombre = registroExistente.artesania2?.nombre;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade100,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.amber.shade900,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Artesano Ya Inscrito',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text.rich(
+              TextSpan(
+                text: 'Este artesano ya está inscrito en este concurso con el ',
+                style: const TextStyle(fontSize: 14),
+                children: [
+                  TextSpan(
+                    text: 'folio de la boleta #$folio.\n',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
+                  ),
+                  const TextSpan(
+                    text:
+                        'No se permite registrar al mismo participante más de una vez en el mismo concurso.',
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    nombre,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  if (curp.isNotEmpty)
+                    Text(
+                      'CURP: $curp',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                  const Divider(height: 12),
+                  Text(
+                    '• Pieza 1: $p1Nombre',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  Text(
+                    tieneP2
+                        ? '• Pieza 2: $p2Nombre'
+                        : '• Pieza 2: (Sin registrar)',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: tieneP2 ? Colors.black87 : Colors.blueGrey,
+                      fontStyle:
+                          tieneP2 ? FontStyle.normal : FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              tieneP2
+                  ? 'El artesano ya tiene sus 2 piezas registradas en esa boleta.'
+                  : 'Si deseas agregar su segunda pieza o modificar sus datos, puedes abrir directamente su boleta de inscripción.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade800,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cerrar'),
+          ),
+          if (!concurso.finalizado)
+            ElevatedButton.icon(
+              icon: const Icon(Icons.edit_document, size: 18),
+              label: Text('Abrir Boleta #$folio'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.casart700,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                Navigator.of(ctx).pop();
+                final resultado = await showDialog<RegistroConcurso>(
+                  context: context,
+                  builder: (c) => EditarInscripcionDialog(
+                    registro: registroExistente,
+                    concurso: concurso,
+                    isReadOnly: concurso.finalizado,
+                  ),
+                );
+                if (resultado != null && mounted) {
+                  ref.invalidate(registrosConcursoProvider);
+                  _limpiarFormulario();
+                }
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _buscarArtesano(String query, Concurso concurso) async {
     if (query.trim().isEmpty) return;
     final repo = ref.read(artesanoRepositoryProvider);
     final artesanos = await repo.searchArtesanos(query: query, limit: 1);
@@ -277,8 +449,29 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
     if (!mounted) return;
 
     if (artesanos.isNotEmpty) {
+      final encontrado = artesanos.first;
+      if (concurso.id != null) {
+        final regRepo = ref.read(registroRepositoryProvider);
+        final regExistente = await regRepo.getRegistroByCurp(
+          idConcurso: concurso.id!,
+          curp: encontrado.curp,
+        );
+
+        if (!mounted) return;
+
+        if (regExistente != null) {
+          setState(() {
+            _selectedArtesano = null;
+            _esNuevoArtesano = false;
+            _busquedaCurpCtrl.clear();
+          });
+          await _mostrarAlertaArtesanoYaInscrito(regExistente, concurso);
+          return;
+        }
+      }
+
       setState(() {
-        _selectedArtesano = artesanos.first;
+        _selectedArtesano = encontrado;
         _esNuevoArtesano = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
@@ -333,6 +526,34 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
         ),
       );
       return;
+    }
+
+    if (_esNuevoArtesano && (_artGenero == null || _artGenero!.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Debes seleccionar el género del artesano.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Validación preventiva por CURP: verificar que no esté ya inscrito en este concurso
+    final curpAValidar = _esNuevoArtesano
+        ? _artCurpCtrl.text.trim().toUpperCase()
+        : (_selectedArtesano?.curp.trim().toUpperCase() ?? '');
+
+    if (curpAValidar.isNotEmpty && concurso.id != null) {
+      final repo = ref.read(registroRepositoryProvider);
+      final regExistente = await repo.getRegistroByCurp(
+        idConcurso: concurso.id!,
+        curp: curpAValidar,
+      );
+      if (!mounted) return;
+      if (regExistente != null) {
+        await _mostrarAlertaArtesanoYaInscrito(regExistente, concurso);
+        return;
+      }
     }
 
     final safeP1Cat =
@@ -502,10 +723,15 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
       }
     } catch (e) {
       if (mounted) {
+        final errStr = e
+            .toString()
+            .replaceAll('StateError: ', '')
+            .replaceAll('Exception: ', '');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al registrar inscripción: $e'),
+            content: Text(errStr),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -857,9 +1083,11 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
 
     return Form(
       key: _formKey,
-      child: ListView(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
-        children: [
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           // BANNER DEL FOLIO ASIGNADO
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -954,13 +1182,13 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                               prefixIcon: Icon(Icons.search),
                               isDense: true,
                             ),
-                            onSubmitted: _buscarArtesano,
+                            onSubmitted: (q) => _buscarArtesano(q, concurso),
                           ),
                         ),
                         const SizedBox(width: 12),
                         ElevatedButton(
                           onPressed: () =>
-                              _buscarArtesano(_busquedaCurpCtrl.text),
+                              _buscarArtesano(_busquedaCurpCtrl.text, concurso),
                           child: const Text('Buscar'),
                         ),
                       ],
@@ -1072,7 +1300,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                               labelText: 'CURP (18 caracteres) *',
                               prefixIcon: Icon(Icons.badge_outlined),
                             ),
-                            onChanged: (v) => _autocompletarDesdeCurp(v),
+                            onChanged: (v) => _autocompletarDesdeCurp(v, concurso),
                             validator: (v) {
                               if (!_esNuevoArtesano) return null;
                               if (v == null || v.trim().isEmpty)
@@ -2082,7 +2310,8 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
           const SizedBox(height: 40),
         ],
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildListadoInscripciones(Concurso concurso) {
