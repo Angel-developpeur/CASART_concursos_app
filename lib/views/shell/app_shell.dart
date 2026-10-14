@@ -13,6 +13,7 @@ import '../tutorial/tutorial_view.dart';
 import '../backup/log_viewer_dialog.dart';
 import '../network/network_config_dialog.dart';
 import '../common/update_dialog.dart';
+import '../../core/services/update_service.dart';
 import '../../core/theme/app_theme.dart';
 
 class AppShell extends ConsumerStatefulWidget {
@@ -236,10 +237,10 @@ class _AppShellState extends ConsumerState<AppShell> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        'v1.0.9\nAngel developpeur',
+                      Text(
+                        'v${UpdateService.currentVersion}\nAngel developpeur',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.white54, fontSize: 10),
+                        style: const TextStyle(color: Colors.white54, fontSize: 10),
                       ),
                       const SizedBox(height: 10),
                       InkWell(
