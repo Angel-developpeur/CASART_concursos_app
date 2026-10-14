@@ -30,7 +30,7 @@ class AppDatabase {
       return await databaseFactory.openDatabase(
         inMemoryDatabasePath,
         options: OpenDatabaseOptions(
-          version: 10,
+          version: 11,
           onCreate: _onCreate,
           onUpgrade: _onUpgrade,
           onOpen: (db) async {
@@ -78,7 +78,7 @@ class AppDatabase {
     return await databaseFactory.openDatabase(
       path,
       options: OpenDatabaseOptions(
-        version: 10,
+        version: 11,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
         onOpen: (db) async {
@@ -169,6 +169,7 @@ class AppDatabase {
       if (needsMigration) {
         await _migrateArtesanoSchema(db);
       }
+      await _migrateArtesanoAndResidenciaNullable(db);
     } catch (_) {}
   }
 
@@ -444,6 +445,123 @@ class AppDatabase {
     if (oldVersion < 10 && newVersion >= 10) {
       await _migrateArtesaniaSchema(db);
     }
+
+    if (oldVersion < 11 && newVersion >= 11) {
+      await _migrateArtesanoAndResidenciaNullable(db);
+    }
+  }
+
+  Future<void> _migrateArtesanoAndResidenciaNullable(Database db) async {
+    try {
+      final resInfo = await db.rawQuery('PRAGMA table_info(residencia)');
+      final artInfo = await db.rawQuery('PRAGMA table_info(artesano)');
+      if (resInfo.isEmpty || artInfo.isEmpty) return;
+
+      final munCol = resInfo.firstWhere((r) => r['name'] == 'municipio', orElse: () => <String, Object?>{});
+      final locCol = resInfo.firstWhere((r) => r['name'] == 'localidad', orElse: () => <String, Object?>{});
+      final patCol = artInfo.firstWhere((r) => r['name'] == 'ap_paterno', orElse: () => <String, Object?>{});
+      final curpCol = artInfo.firstWhere((r) => r['name'] == 'curp', orElse: () => <String, Object?>{});
+
+      final bool resNeedsMigration = munCol['notnull'] == 1 || locCol['notnull'] == 1;
+      final bool artNeedsMigration = patCol['notnull'] == 1 || curpCol['notnull'] == 1;
+
+      if (!resNeedsMigration && !artNeedsMigration) return;
+
+      await db.execute('PRAGMA foreign_keys = OFF');
+
+      if (resNeedsMigration) {
+        await db.execute('''
+          CREATE TABLE residencia_tmp (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            municipio TEXT,
+            localidad TEXT,
+            colonia TEXT,
+            calle TEXT,
+            numero_exterior TEXT,
+            cp TEXT,
+            created_at TEXT DEFAULT (datetime('now', 'localtime')),
+            updated_at TEXT
+          )
+        ''');
+
+        await db.execute('''
+          INSERT INTO residencia_tmp (
+            id, municipio, localidad, colonia, calle, numero_exterior, cp, created_at, updated_at
+          )
+          SELECT id, municipio, localidad, colonia, calle, numero_exterior, cp, created_at, updated_at
+          FROM residencia
+        ''');
+
+        await db.execute('DROP TABLE residencia');
+        await db.execute('ALTER TABLE residencia_tmp RENAME TO residencia');
+      }
+
+      if (artNeedsMigration) {
+        await db.execute('''
+          CREATE TABLE artesano_tmp (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL,
+            ap_paterno TEXT,
+            ap_materno TEXT,
+            curp TEXT UNIQUE,
+            rfc TEXT,
+            fecha_nacimiento TEXT,
+            genero TEXT,
+            finado INTEGER DEFAULT 0,
+            max_nivel_academico TEXT DEFAULT '0',
+            id_imagen INTEGER DEFAULT NULL,
+            id_etnia INTEGER,
+            id_info_contacto INTEGER,
+            id_info_socioeconomica INTEGER,
+            id_info_espacio_produccion INTEGER,
+            id_info_artesanal INTEGER,
+            id_materias_primas INTEGER,
+            id_productos_principales INTEGER,
+            id_canales_venta INTEGER,
+            id_residencia INTEGER,
+            id_problemas_salud INTEGER,
+            id_estado_civil INTEGER,
+            created_at TEXT DEFAULT (datetime('now', 'localtime')),
+            updated_at TEXT,
+            deleted_at TEXT,
+            created_by INTEGER,
+            id_firma INTEGER,
+            numero_ine TEXT,
+            area TEXT DEFAULT 'concursos',
+            verificado INTEGER DEFAULT 0,
+            FOREIGN KEY (id_etnia) REFERENCES etnia(id),
+            FOREIGN KEY (id_info_contacto) REFERENCES info_contacto(id),
+            FOREIGN KEY (id_residencia) REFERENCES residencia(id),
+            FOREIGN KEY (id_estado_civil) REFERENCES estado_civil(id)
+          )
+        ''');
+
+        final artCols = artInfo.map((r) => r['name'] as String).toSet();
+        final columnsToCopy = [
+          'id', 'nombre', 'ap_paterno', 'ap_materno', 'curp', 'rfc',
+          'fecha_nacimiento', 'genero', 'finado', 'max_nivel_academico',
+          'id_imagen', 'id_etnia', 'id_info_contacto', 'id_info_socioeconomica',
+          'id_info_espacio_produccion', 'id_info_artesanal', 'id_materias_primas',
+          'id_productos_principales', 'id_canales_venta', 'id_residencia',
+          'id_problemas_salud', 'id_estado_civil', 'created_at', 'updated_at',
+          'deleted_at', 'created_by', 'id_firma', 'numero_ine', 'area', 'verificado'
+        ].where(artCols.contains).join(', ');
+
+        await db.execute('''
+          INSERT INTO artesano_tmp ($columnsToCopy)
+          SELECT $columnsToCopy
+          FROM artesano
+        ''');
+
+        await db.execute('DROP TABLE artesano');
+        await db.execute('ALTER TABLE artesano_tmp RENAME TO artesano');
+      }
+
+      await db.execute('PRAGMA foreign_keys = ON');
+    } catch (e, stack) {
+      AppLogger.error('Error durante la migración de artesano/residencia nullable: $e', category: 'DATABASE', error: e, stackTrace: stack);
+      rethrow;
+    }
   }
 
   Future<void> _migrateArtesanoSchema(Database db) async {
@@ -469,8 +587,8 @@ class AppDatabase {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS residencia (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        municipio TEXT NOT NULL,
-        localidad TEXT NOT NULL,
+        municipio TEXT,
+        localidad TEXT,
         colonia TEXT,
         calle TEXT,
         numero_exterior TEXT,
@@ -485,9 +603,9 @@ class AppDatabase {
       CREATE TABLE IF NOT EXISTS artesano_tmp (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nombre TEXT NOT NULL,
-        ap_paterno TEXT NOT NULL,
+        ap_paterno TEXT,
         ap_materno TEXT,
-        curp TEXT NOT NULL UNIQUE,
+        curp TEXT UNIQUE,
         rfc TEXT,
         fecha_nacimiento TEXT,
         genero TEXT,
@@ -844,8 +962,8 @@ class AppDatabase {
     await db.execute('''
       CREATE TABLE residencia (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        municipio TEXT NOT NULL,
-        localidad TEXT NOT NULL,
+        municipio TEXT,
+        localidad TEXT,
         colonia TEXT,
         calle TEXT,
         numero_exterior TEXT,
@@ -859,9 +977,9 @@ class AppDatabase {
       CREATE TABLE artesano (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nombre TEXT NOT NULL,
-        ap_paterno TEXT NOT NULL,
+        ap_paterno TEXT,
         ap_materno TEXT,
-        curp TEXT NOT NULL UNIQUE,
+        curp TEXT UNIQUE,
         rfc TEXT,
         fecha_nacimiento TEXT,
         genero TEXT,
