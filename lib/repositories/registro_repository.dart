@@ -86,49 +86,69 @@ class RegistroRepository {
           );
         }
 
-        // 1. Resolver el ID del artesano
+        // 1. Resolver el ID del artesano y actualizar/crear su información
         int artesanoId;
-        if (esNuevoArtesano || artesano.id == null) {
-          // Verificar si existe la CURP
-          final existing = await txn.query(
+        Map<String, Object?>? existingRow;
+
+        if (artesano.id != null) {
+          final rows = await txn.query(
+            'artesano',
+            where: 'id = ?',
+            whereArgs: [artesano.id],
+          );
+          if (rows.isNotEmpty) existingRow = rows.first;
+        }
+
+        if (existingRow == null && artesano.curp.trim().isNotEmpty) {
+          final rows = await txn.query(
             'artesano',
             where: 'UPPER(curp) = ?',
             whereArgs: [artesano.curp.trim().toUpperCase()],
           );
-          if (existing.isNotEmpty) {
-            artesanoId = existing.first['id'] as int;
-            int? contactId = existing.first['id_info_contacto'] as int? ?? artesano.idInfoContacto;
-            int? resId = existing.first['id_residencia'] as int? ?? artesano.idResidencia;
+          if (rows.isNotEmpty) existingRow = rows.first;
+        }
 
-            if (contactId != null) {
-              await txn.update('info_contacto', artesano.toInfoContactoMap(), where: 'id = ?', whereArgs: [contactId]);
-            } else {
-              contactId = await txn.insert('info_contacto', artesano.toInfoContactoMap());
-            }
+        if (existingRow != null) {
+          artesanoId = existingRow['id'] as int;
+          int? contactId = existingRow['id_info_contacto'] as int? ?? artesano.idInfoContacto;
+          int? resId = existingRow['id_residencia'] as int? ?? artesano.idResidencia;
 
-            if (resId != null) {
-              await txn.update('residencia', artesano.toResidenciaMap(), where: 'id = ?', whereArgs: [resId]);
-            } else {
-              resId = await txn.insert('residencia', artesano.toResidenciaMap());
-            }
-
-            final artMap = artesano.toTableMap(
-              idInfoContacto: contactId,
-              idResidencia: resId,
+          if (contactId != null) {
+            await txn.update(
+              'info_contacto',
+              artesano.toInfoContactoMap(),
+              where: 'id = ?',
+              whereArgs: [contactId],
             );
-            artMap.remove('id');
-            await txn.update('artesano', artMap, where: 'id = ?', whereArgs: [artesanoId]);
           } else {
-            final contactId = await txn.insert('info_contacto', artesano.toInfoContactoMap());
-            final resId = await txn.insert('residencia', artesano.toResidenciaMap());
-            final artMap = artesano.toTableMap(
-              idInfoContacto: contactId,
-              idResidencia: resId,
-            );
-            artesanoId = await txn.insert('artesano', artMap);
+            contactId = await txn.insert('info_contacto', artesano.toInfoContactoMap());
           }
+
+          if (resId != null) {
+            await txn.update(
+              'residencia',
+              artesano.toResidenciaMap(),
+              where: 'id = ?',
+              whereArgs: [resId],
+            );
+          } else {
+            resId = await txn.insert('residencia', artesano.toResidenciaMap());
+          }
+
+          final artMap = artesano.toTableMap(
+            idInfoContacto: contactId,
+            idResidencia: resId,
+          );
+          artMap.remove('id');
+          await txn.update('artesano', artMap, where: 'id = ?', whereArgs: [artesanoId]);
         } else {
-          artesanoId = artesano.id!;
+          final contactId = await txn.insert('info_contacto', artesano.toInfoContactoMap());
+          final resId = await txn.insert('residencia', artesano.toResidenciaMap());
+          final artMap = artesano.toTableMap(
+            idInfoContacto: contactId,
+            idResidencia: resId,
+          );
+          artesanoId = await txn.insert('artesano', artMap);
         }
 
         // 2. Insertar Pieza 1

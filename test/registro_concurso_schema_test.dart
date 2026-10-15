@@ -378,5 +378,132 @@ void main() {
       );
       expect(regC2.folio, equals(1));
     });
+
+    test('registrarInscripcion actualiza los datos del artesano en la base de datos si fueron editados o completados', () async {
+      final db = await databaseFactoryFfi.openDatabase(
+        inMemoryDatabasePath,
+        options: OpenDatabaseOptions(
+          version: 9,
+          onCreate: AppDatabase().onCreate,
+          onUpgrade: AppDatabase().onUpgrade,
+          onConfigure: (db) async {
+            await db.execute('PRAGMA foreign_keys = ON');
+          },
+        ),
+      );
+
+      final dbHelper = AppDatabase.withDatabase(db);
+      final concursoRepo = ConcursoRepository(dbHelper: dbHelper);
+      final registroRepo = RegistroRepository(dbHelper: dbHelper);
+
+      final cId = await concursoRepo.createConcurso(
+        Concurso(
+          nombre: 'Concurso Actualización Artesano',
+          idTipoConcurso: 1,
+          categorias: [Categoria(nombre: 'Textiles')],
+        ),
+      );
+      final c = await concursoRepo.getConcursoById(cId);
+      final catId = c!.categorias.first.id!;
+
+      // 1. Crear un artesano inicial directamente en el sistema
+      final artesanoInicial = Artesano(
+        nombre: 'Juan',
+        apPaterno: 'Pérez',
+        curp: 'PERJ800101MNZRRP01',
+        municipio: 'Morelia',
+        localidad: 'Morelia',
+      );
+
+      final cPrevId = await concursoRepo.createConcurso(
+        Concurso(
+          nombre: 'Concurso Previo',
+          idTipoConcurso: 1,
+          categorias: [Categoria(nombre: 'Varios')],
+        ),
+      );
+      final cPrev = await concursoRepo.getConcursoById(cPrevId);
+
+      final regPrev = await registroRepo.registrarInscripcion(
+        idConcurso: cPrevId,
+        artesano: artesanoInicial,
+        esNuevoArtesano: true,
+        pieza1: Artesania(
+          nombre: 'Pieza Base',
+          descripcion: 'Base desc',
+          costoProduccion: 200.0,
+          costoVenta: 400.0,
+          tiempoElaboracion: 2.0,
+          plazoElaboracion: 'dias',
+          materialElaboracion: 'Barro',
+          idRamaArtesanal: 1,
+          idCategoriaConcurso: cPrev!.categorias.first.id!,
+        ),
+      );
+
+      final artesanoGuardado = regPrev.artesano!;
+      expect(artesanoGuardado.id, isNotNull);
+      expect(artesanoGuardado.telefono, isNull);
+      expect(artesanoGuardado.calle, isNull);
+
+      // 2. Ahora, durante la inscripción al nuevo concurso, se enlazan sus datos pero se editan y completan
+      final artesanoEditado = Artesano(
+        id: artesanoGuardado.id,
+        idInfoContacto: artesanoGuardado.idInfoContacto,
+        idResidencia: artesanoGuardado.idResidencia,
+        nombre: 'Juan Carlos', // Editado
+        apPaterno: 'Pérez',
+        apMaterno: 'Gómez', // Completado
+        curp: 'PERJ800101MNZRRP01',
+        telefono: '4431234567', // Completado
+        municipio: 'Morelia',
+        localidad: 'Capula', // Editado
+        calle: 'Av. Hidalgo', // Completado
+        numeroExterior: '123', // Completado
+        codigoPostal: '58000', // Completado
+        nivelEducativo: '5', // Completado
+      );
+
+      final regNuevo = await registroRepo.registrarInscripcion(
+        idConcurso: cId,
+        artesano: artesanoEditado,
+        esNuevoArtesano: false,
+        pieza1: Artesania(
+          nombre: 'Rebozo Azul',
+          descripcion: 'Rebozo desc',
+          costoProduccion: 500.0,
+          costoVenta: 1000.0,
+          tiempoElaboracion: 5.0,
+          plazoElaboracion: 'semanas',
+          materialElaboracion: 'Lana',
+          idRamaArtesanal: 2,
+          idCategoriaConcurso: catId,
+        ),
+      );
+
+      // 3. Verificar que el registro y la base de datos reflejan la información actualizada del artesano
+      expect(regNuevo.artesano!.nombre, equals('Juan Carlos'));
+      expect(regNuevo.artesano!.apMaterno, equals('Gómez'));
+      expect(regNuevo.artesano!.telefono, equals('4431234567'));
+      expect(regNuevo.artesano!.localidad, equals('Capula'));
+      expect(regNuevo.artesano!.calle, equals('Av. Hidalgo'));
+      expect(regNuevo.artesano!.numeroExterior, equals('123'));
+      expect(regNuevo.artesano!.codigoPostal, equals('58000'));
+      expect(regNuevo.artesano!.nivelEducativo, equals('5'));
+
+      // Verificar directamente en las tablas de SQLite
+      final artRows = await db.query('artesano', where: 'id = ?', whereArgs: [artesanoGuardado.id]);
+      expect(artRows.first['nombre'], equals('Juan Carlos'));
+      expect(artRows.first['ap_materno'], equals('Gómez'));
+      expect(artRows.first['max_nivel_academico'], equals('5'));
+
+      final contactRows = await db.query('info_contacto', where: 'id = ?', whereArgs: [artRows.first['id_info_contacto']]);
+      expect(contactRows.first['telefono'], equals('4431234567'));
+
+      final resRows = await db.query('residencia', where: 'id = ?', whereArgs: [artRows.first['id_residencia']]);
+      expect(resRows.first['localidad'], equals('Capula'));
+      expect(resRows.first['calle'], equals('Av. Hidalgo'));
+      expect(resRows.first['cp'], equals('58000'));
+    });
   });
 }

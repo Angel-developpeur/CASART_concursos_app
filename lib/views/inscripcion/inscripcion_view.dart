@@ -84,17 +84,6 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
     'Posgrado',
   ];
 
-  static String _getNivelEducativoTexto(String? raw) {
-    if (raw == null || raw.isEmpty) return 'No especificado';
-    final index = int.tryParse(raw);
-    if (index != null &&
-        index >= 0 &&
-        index < _nivelesEducativosDetalle.length) {
-      return _nivelesEducativosDetalle[index];
-    }
-    return raw;
-  }
-
   // Pieza 1
   final _p1NombreCtrl = TextEditingController();
   int? _p1RamaId;
@@ -221,6 +210,87 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
         controller.text = formatted;
       });
     }
+  }
+
+  String? _resolveMunicipio(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return null;
+    final trimmed = raw.trim();
+    if (MunicipiosData.municipios.contains(trimmed)) {
+      return trimmed;
+    }
+    final rawLower = trimmed.toLowerCase();
+    for (final m in MunicipiosData.municipios) {
+      if (m.toLowerCase() == rawLower ||
+          m.toLowerCase().startsWith(rawLower) ||
+          rawLower.startsWith(m.toLowerCase().split(' zona')[0])) {
+        return m;
+      }
+    }
+    return trimmed;
+  }
+
+  void _cargarDatosArtesano(Artesano a) {
+    _artNombreCtrl.text = a.nombre;
+    _artApPaternoCtrl.text = a.apPaterno;
+    _artApMaternoCtrl.text = a.apMaterno ?? '';
+    _artCurpCtrl.text = a.curp;
+    _artRfcCtrl.text = a.rfc ?? '';
+    _artFechaNacimientoCtrl.text = a.fechaNacimiento ?? '';
+
+    final g = a.genero?.toUpperCase();
+    if (g == 'M' || g == 'HOMBRE' || g == 'MASCULINO') {
+      _artGenero = 'M';
+    } else if (g == 'F' || g == 'MUJER' || g == 'FEMENINO') {
+      _artGenero = 'F';
+    } else if (g == 'O' || g == 'OTRO') {
+      _artGenero = 'O';
+    } else {
+      _artGenero = null;
+    }
+
+    _artTelefonoCtrl.text = a.telefono ?? '';
+
+    final rawMun = a.municipio.trim();
+    _artMunicipio = _resolveMunicipio(rawMun);
+    _artMunicipioCtrl.text = _artMunicipio ?? rawMun;
+
+    final rawLoc = a.localidad.trim();
+    _artLocalidad = rawLoc.isNotEmpty ? rawLoc : null;
+    _artLocalidadCtrl.text = rawLoc;
+
+    _artColoniaCtrl.text = a.colonia ?? '';
+    _artCalleCtrl.text = a.calle ?? '';
+    _artNumExteriorCtrl.text = a.numeroExterior ?? '';
+    _artCodigoPostalCtrl.text = a.codigoPostal ?? '';
+
+    _artEtniaId = a.idEtnia;
+    _artEstadoCivilId = a.idEstadoCivil;
+
+    final rawNivel = int.tryParse(a.nivelEducativo ?? '0') ?? 0;
+    _artNivelEducativo = (rawNivel >= 0 && rawNivel <= 9) ? rawNivel : 0;
+  }
+
+  void _limpiarCamposArtesano() {
+    _busquedaCurpCtrl.clear();
+    _artNombreCtrl.clear();
+    _artApPaternoCtrl.clear();
+    _artApMaternoCtrl.clear();
+    _artCurpCtrl.clear();
+    _artRfcCtrl.clear();
+    _artFechaNacimientoCtrl.clear();
+    _artGenero = null;
+    _artTelefonoCtrl.clear();
+    _artMunicipio = null;
+    _artMunicipioCtrl.clear();
+    _artLocalidad = null;
+    _artLocalidadCtrl.clear();
+    _artColoniaCtrl.clear();
+    _artCalleCtrl.clear();
+    _artNumExteriorCtrl.clear();
+    _artCodigoPostalCtrl.clear();
+    _artEtniaId = null;
+    _artEstadoCivilId = null;
+    _artNivelEducativo = 0;
   }
 
   void _autocompletarDesdeCurp(String rawCurp, Concurso concurso) {
@@ -463,7 +533,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
           setState(() {
             _selectedArtesano = null;
             _esNuevoArtesano = false;
-            _busquedaCurpCtrl.clear();
+            _limpiarCamposArtesano();
           });
           await _mostrarAlertaArtesanoYaInscrito(regExistente, concurso);
           return;
@@ -473,6 +543,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
       setState(() {
         _selectedArtesano = encontrado;
         _esNuevoArtesano = false;
+        _cargarDatosArtesano(encontrado);
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -486,10 +557,9 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
       setState(() {
         _selectedArtesano = null;
         _esNuevoArtesano = true;
+        _limpiarCamposArtesano();
         if (int.tryParse(query.trim()) == null) {
           _artCurpCtrl.text = query.trim().toUpperCase();
-        } else {
-          _artCurpCtrl.clear();
         }
       });
       ScaffoldMessenger.of(context).showSnackBar(
@@ -516,19 +586,19 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
       return;
     }
 
-    if (!_formKey.currentState!.validate()) return;
-
     if (_selectedArtesano == null && !_esNuevoArtesano) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Debes seleccionar o registrar un artesano.'),
+          content: Text('Debes buscar y seleccionar un artesano o elegir "Nuevo Artesano".'),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
-    if (_esNuevoArtesano && (_artGenero == null || _artGenero!.isEmpty)) {
+    if (!_formKey.currentState!.validate()) return;
+
+    if (_artGenero == null || _artGenero!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Debes seleccionar el género del artesano.'),
@@ -539,9 +609,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
     }
 
     // Validación preventiva por CURP: verificar que no esté ya inscrito en este concurso
-    final curpAValidar = _esNuevoArtesano
-        ? _artCurpCtrl.text.trim().toUpperCase()
-        : (_selectedArtesano?.curp.trim().toUpperCase() ?? '');
+    final curpAValidar = _artCurpCtrl.text.trim().toUpperCase();
 
     if (curpAValidar.isNotEmpty && concurso.id != null) {
       final repo = ref.read(registroRepositoryProvider);
@@ -620,44 +688,59 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
     try {
       final repo = ref.read(registroRepositoryProvider);
 
-      // Artesano
-      final Artesano artesanoFinal = _esNuevoArtesano
-          ? Artesano(
-              nombre: _artNombreCtrl.text.trim(),
-              apPaterno: _artApPaternoCtrl.text.trim(),
-              apMaterno: _artApMaternoCtrl.text.trim().isNotEmpty
-                  ? _artApMaternoCtrl.text.trim()
-                  : null,
-              curp: _artCurpCtrl.text.trim().toUpperCase(),
-              rfc: _artRfcCtrl.text.trim().isNotEmpty
-                  ? _artRfcCtrl.text.trim().toUpperCase()
-                  : null,
-              fechaNacimiento: _artFechaNacimientoCtrl.text.trim().isNotEmpty
-                  ? _artFechaNacimientoCtrl.text.trim()
-                  : null,
-              genero: _artGenero,
-              telefono: _artTelefonoCtrl.text.trim().isNotEmpty
-                  ? _artTelefonoCtrl.text.trim()
-                  : null,
-              municipio: _artMunicipioCtrl.text.trim(),
-              localidad: _artLocalidadCtrl.text.trim(),
-              colonia: _artColoniaCtrl.text.trim().isNotEmpty
-                  ? _artColoniaCtrl.text.trim()
-                  : null,
-              calle: _artCalleCtrl.text.trim().isNotEmpty
-                  ? _artCalleCtrl.text.trim()
-                  : null,
-              numeroExterior: _artNumExteriorCtrl.text.trim().isNotEmpty
-                  ? _artNumExteriorCtrl.text.trim()
-                  : null,
-              codigoPostal: _artCodigoPostalCtrl.text.trim().isNotEmpty
-                  ? _artCodigoPostalCtrl.text.trim()
-                  : null,
-              idEtnia: _artEtniaId,
-              idEstadoCivil: _artEstadoCivilId,
-              nivelEducativo: _artNivelEducativo.toString(),
-            )
-          : _selectedArtesano!;
+      final safeEtnia =
+          (_artEtniaId != null && _etnias.any((e) => e['id'] == _artEtniaId))
+              ? _artEtniaId
+              : null;
+      final safeEstadoCivil =
+          (_artEstadoCivilId != null &&
+                  _estadosCiviles.any((ec) => ec['id'] == _artEstadoCivilId))
+              ? _artEstadoCivilId
+              : null;
+
+      // Artesano (toma los valores actuales editados/completados en el formulario)
+      final Artesano artesanoFinal = Artesano(
+        id: _selectedArtesano?.id,
+        idInfoContacto: _selectedArtesano?.idInfoContacto,
+        idResidencia: _selectedArtesano?.idResidencia,
+        nombre: _artNombreCtrl.text.trim(),
+        apPaterno: _artApPaternoCtrl.text.trim(),
+        apMaterno: _artApMaternoCtrl.text.trim().isNotEmpty
+            ? _artApMaternoCtrl.text.trim()
+            : null,
+        curp: _artCurpCtrl.text.trim().toUpperCase(),
+        rfc: _artRfcCtrl.text.trim().isNotEmpty
+            ? _artRfcCtrl.text.trim().toUpperCase()
+            : null,
+        fechaNacimiento: _artFechaNacimientoCtrl.text.trim().isNotEmpty
+            ? _artFechaNacimientoCtrl.text.trim()
+            : null,
+        genero: _artGenero,
+        telefono: _artTelefonoCtrl.text.trim().isNotEmpty
+            ? _artTelefonoCtrl.text.trim()
+            : null,
+        municipio: _artMunicipioCtrl.text.trim().isNotEmpty
+            ? _artMunicipioCtrl.text.trim()
+            : (_artMunicipio ?? ''),
+        localidad: _artLocalidadCtrl.text.trim().isNotEmpty
+            ? _artLocalidadCtrl.text.trim()
+            : (_artLocalidad ?? ''),
+        colonia: _artColoniaCtrl.text.trim().isNotEmpty
+            ? _artColoniaCtrl.text.trim()
+            : null,
+        calle: _artCalleCtrl.text.trim().isNotEmpty
+            ? _artCalleCtrl.text.trim()
+            : null,
+        numeroExterior: _artNumExteriorCtrl.text.trim().isNotEmpty
+            ? _artNumExteriorCtrl.text.trim()
+            : null,
+        codigoPostal: _artCodigoPostalCtrl.text.trim().isNotEmpty
+            ? _artCodigoPostalCtrl.text.trim()
+            : null,
+        idEtnia: safeEtnia,
+        idEstadoCivil: safeEstadoCivil,
+        nivelEducativo: _artNivelEducativo.toString(),
+      );
 
       // Pieza 1
       final p1CostoProd = double.tryParse(_p1CostoCtrl.text.trim()) ?? 0.0;
@@ -744,26 +827,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
     setState(() {
       _selectedArtesano = null;
       _esNuevoArtesano = false;
-      _busquedaCurpCtrl.clear();
-      _artNombreCtrl.clear();
-      _artApPaternoCtrl.clear();
-      _artApMaternoCtrl.clear();
-      _artCurpCtrl.clear();
-      _artRfcCtrl.clear();
-      _artFechaNacimientoCtrl.clear();
-      _artGenero = null;
-      _artTelefonoCtrl.clear();
-      _artMunicipio = null;
-      _artMunicipioCtrl.clear();
-      _artLocalidad = null;
-      _artLocalidadCtrl.clear();
-      _artColoniaCtrl.clear();
-      _artCalleCtrl.clear();
-      _artNumExteriorCtrl.clear();
-      _artCodigoPostalCtrl.clear();
-      _artEtniaId = null;
-      _artEstadoCivilId = null;
-      _artNivelEducativo = 0;
+      _limpiarCamposArtesano();
 
       _p1NombreCtrl.clear();
       _p1RamaId = null;
@@ -1156,15 +1220,29 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                       ChoiceChip(
                         label: const Text('Buscar Registrado'),
                         selected: !_esNuevoArtesano,
-                        onSelected: (val) =>
-                            setState(() => _esNuevoArtesano = !val),
+                        onSelected: (val) {
+                          if (val) {
+                            setState(() {
+                              _esNuevoArtesano = false;
+                              _selectedArtesano = null;
+                              _limpiarCamposArtesano();
+                            });
+                          }
+                        },
                       ),
                       const SizedBox(width: 8),
                       ChoiceChip(
                         label: const Text('Nuevo Artesano'),
                         selected: _esNuevoArtesano,
-                        onSelected: (val) =>
-                            setState(() => _esNuevoArtesano = val),
+                        onSelected: (val) {
+                          if (val) {
+                            setState(() {
+                              _esNuevoArtesano = true;
+                              _selectedArtesano = null;
+                              _limpiarCamposArtesano();
+                            });
+                          }
+                        },
                       ),
                     ],
                   ),
@@ -1186,17 +1264,51 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                           ),
                         ),
                         const SizedBox(width: 12),
-                        ElevatedButton(
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.search, size: 18),
                           onPressed: () =>
                               _buscarArtesano(_busquedaCurpCtrl.text, concurso),
-                          child: const Text('Buscar'),
+                          label: const Text('Buscar'),
                         ),
                       ],
                     ),
-                    if (_selectedArtesano != null) ...[
+                    if (_selectedArtesano == null) ...[
                       const SizedBox(height: 16),
                       Container(
                         padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey.shade900
+                              : Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.grey.shade800
+                                : Colors.grey.shade300,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline, color: Colors.blueGrey.shade600),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Ingresa la CURP o ID del artesano registrado y presiona "Buscar" para cargar sus datos en el formulario y editarlos o completarlos si es necesario. Si el artesano no está registrado en el padrón, selecciona "Nuevo Artesano" arriba.',
+                                style: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey.shade300
+                                      : Colors.blueGrey.shade700,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         decoration: BoxDecoration(
                           color: AppTheme.casart50,
                           borderRadius: BorderRadius.circular(8),
@@ -1204,43 +1316,107 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                         ),
                         child: Row(
                           children: [
-                            const CircleAvatar(child: Icon(Icons.person)),
-                            const SizedBox(width: 16),
+                            CircleAvatar(
+                              backgroundColor: AppTheme.casart700,
+                              foregroundColor: Colors.white,
+                              child: const Icon(Icons.person, size: 22),
+                            ),
+                            const SizedBox(width: 14),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    _selectedArtesano!.nombreCompleto,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        _selectedArtesano!.nombreCompleto,
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.green.shade100,
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(color: Colors.green.shade400),
+                                        ),
+                                        child: Text(
+                                          'Artesano Registrado (ID: ${_selectedArtesano!.id ?? 'S/N'})',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.green.shade900,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
+                                  const SizedBox(height: 2),
                                   Text(
-                                    'ID: ${_selectedArtesano!.id ?? 'S/N'} | CURP: ${_selectedArtesano!.curp} | Tel: ${_selectedArtesano!.telefono ?? 'S/N'}${_selectedArtesano!.generoDescripcion != null ? ' | Género: ${_selectedArtesano!.generoDescripcion}' : ''}${_selectedArtesano!.nivelEducativo != null && _selectedArtesano!.nivelEducativo!.isNotEmpty ? ' | Escolaridad: ${_getNivelEducativoTexto(_selectedArtesano!.nivelEducativo)}' : ''}',
-                                  ),
-                                  Text(
-                                    'Domicilio: ${_selectedArtesano!.direccionCompleta}',
-                                    style: const TextStyle(
-                                      color: Colors.grey,
+                                    'Los datos del artesano han sido cargados en los campos de abajo. Puedes editar o completar la información si es necesario; los cambios se actualizarán automáticamente en la tabla al guardar la inscripción.',
+                                    style: TextStyle(
                                       fontSize: 12,
+                                      color: Colors.blueGrey.shade800,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.close, color: Colors.grey),
-                              onPressed: () =>
-                                  setState(() => _selectedArtesano = null),
+                            OutlinedButton.icon(
+                              icon: const Icon(Icons.close, size: 16),
+                              label: const Text('Cambiar'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.red.shade700,
+                                side: BorderSide(color: Colors.red.shade300),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 8,
+                                ),
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _selectedArtesano = null;
+                                  _limpiarCamposArtesano();
+                                });
+                              },
                             ),
                           ],
                         ),
                       ),
                     ],
                   ] else ...[
-                    // CAMPOS DE NUEVO ARTESANO - DATOS PERSONALES
+                    // MODO NUEVO ARTESANO
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.amber.shade300),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.person_add_alt_1_outlined, color: Colors.amber.shade900),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Captura los datos del nuevo artesano. Se guardará automáticamente en el padrón de artesanos al registrar la inscripción.',
+                              style: TextStyle(color: Colors.amber.shade900, fontSize: 13),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  if (_esNuevoArtesano || _selectedArtesano != null) ...[
+                    const SizedBox(height: 16),
+                    // CAMPOS DE ARTESANO - DATOS PERSONALES
                     Row(
                       children: [
                         Expanded(
@@ -1250,9 +1426,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                               labelText: 'Nombre(s) *',
                               prefixIcon: Icon(Icons.person_outline),
                             ),
-                            validator: (v) =>
-                                _esNuevoArtesano &&
-                                    (v == null || v.trim().isEmpty)
+                            validator: (v) => (v == null || v.trim().isEmpty)
                                 ? 'Requerido'
                                 : null,
                           ),
@@ -1264,9 +1438,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                             decoration: const InputDecoration(
                               labelText: 'Primer Apellido *',
                             ),
-                            validator: (v) =>
-                                _esNuevoArtesano &&
-                                    (v == null || v.trim().isEmpty)
+                            validator: (v) => (v == null || v.trim().isEmpty)
                                 ? 'Requerido'
                                 : null,
                           ),
@@ -1302,11 +1474,12 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                             ),
                             onChanged: (v) => _autocompletarDesdeCurp(v, concurso),
                             validator: (v) {
-                              if (!_esNuevoArtesano) return null;
-                              if (v == null || v.trim().isEmpty)
+                              if (v == null || v.trim().isEmpty) {
                                 return 'La CURP es requerida';
-                              if (v.trim().length != 18)
+                              }
+                              if (v.trim().length != 18) {
                                 return 'La CURP debe tener exactamente 18 caracteres';
+                              }
                               return null;
                             },
                           ),
@@ -1330,9 +1503,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                                 ),
                               ),
                             ),
-                            validator: (v) =>
-                                _esNuevoArtesano &&
-                                    (v == null || v.trim().isEmpty)
+                            validator: (v) => (v == null || v.trim().isEmpty)
                                 ? 'Requerido'
                                 : null,
                           ),
@@ -1365,8 +1536,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                                 child: Text('Otro'),
                               ),
                             ],
-                            validator: (v) =>
-                                _esNuevoArtesano && (v == null || v.isEmpty)
+                            validator: (v) => (v == null || v.isEmpty)
                                 ? 'Requerido'
                                 : null,
                             onChanged: (v) => setState(() => _artGenero = v),
@@ -1387,7 +1557,6 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                               prefixIcon: Icon(Icons.phone_outlined),
                             ),
                             validator: (v) {
-                              if (!_esNuevoArtesano) return null;
                               final val = v?.trim() ?? '';
                               if (val.isNotEmpty && val.length != 10) {
                                 return 'Debe tener exactamente 10 dígitos';
@@ -1427,7 +1596,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                                   ),
                                 )
                                 .toList(),
-                            validator: (v) => _esNuevoArtesano && v == null
+                            validator: (v) => v == null
                                 ? 'Selecciona una etnia'
                                 : null,
                             onChanged: (v) => setState(() => _artEtniaId = v),
@@ -1450,7 +1619,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                                   ),
                                 )
                                 .toList(),
-                            validator: (v) => _esNuevoArtesano && v == null
+                            validator: (v) => v == null
                                 ? 'Selecciona un estado civil'
                                 : null,
                             onChanged: (v) =>
@@ -1643,9 +1812,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                             prefixIcon: Icons.location_city_outlined,
                             searchTitle: 'Buscar Municipio',
                             searchHint: 'Escribe una letra o nombre del municipio...',
-                            validator: (v) =>
-                                _esNuevoArtesano &&
-                                    (v == null || v.trim().isEmpty)
+                            validator: (v) => (v == null || v.trim().isEmpty)
                                 ? 'Selecciona un municipio'
                                 : null,
                             onChanged: (val) {
@@ -1696,9 +1863,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                                 searchHint: 'Escribe una letra o nombre de la localidad...',
                                 allowCustomValue: true,
                                 customValueLabel: 'localidad',
-                                validator: (v) =>
-                                    _esNuevoArtesano &&
-                                        (v == null || v.trim().isEmpty)
+                                validator: (v) => (v == null || v.trim().isEmpty)
                                     ? 'Selecciona una localidad'
                                     : null,
                                 onChanged: !hasMun
@@ -1729,11 +1894,12 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                               ),
                             ),
                             validator: (v) {
-                              if (!_esNuevoArtesano) return null;
-                              if (v == null || v.trim().isEmpty)
+                              if (v == null || v.trim().isEmpty) {
                                 return 'El Código Postal es obligatorio';
-                              if (v.trim().length != 5)
+                              }
+                              if (v.trim().length != 5) {
                                 return 'Debe tener 5 dígitos';
+                              }
                               return null;
                             },
                           ),
