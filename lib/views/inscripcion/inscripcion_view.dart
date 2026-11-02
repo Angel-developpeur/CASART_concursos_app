@@ -17,6 +17,7 @@ import 'editar_inscripcion_dialog.dart';
 import 'premiar_pieza_dialog.dart';
 import '../premios/acta_ganadores_dialog.dart';
 import '../common/excel_export_dropdown.dart';
+import '../common/key_selectable_dropdown_form_field.dart';
 import '../common/searchable_select_form_field.dart';
 
 class InscripcionView extends ConsumerStatefulWidget {
@@ -90,7 +91,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
   int? _p1CategoriaId;
   int? _p1SubcategoriaId;
   final _p1CostoCtrl = TextEditingController();
-  final _p1TiempoCtrl = TextEditingController(text: '1.0');
+  final _p1TiempoCtrl = TextEditingController();
   String _p1Plazo = 'semanas';
   final _p1MaterialCtrl = TextEditingController();
   final _p1DescripcionCtrl = TextEditingController();
@@ -102,7 +103,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
   int? _p2CategoriaId;
   int? _p2SubcategoriaId;
   final _p2CostoCtrl = TextEditingController();
-  final _p2TiempoCtrl = TextEditingController(text: '1.0');
+  final _p2TiempoCtrl = TextEditingController();
   String _p2Plazo = 'semanas';
   final _p2MaterialCtrl = TextEditingController();
   final _p2DescripcionCtrl = TextEditingController();
@@ -268,6 +269,49 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
 
     final rawNivel = int.tryParse(a.nivelEducativo ?? '0') ?? 0;
     _artNivelEducativo = (rawNivel >= 0 && rawNivel <= 9) ? rawNivel : 0;
+
+    if (_artFechaNacimientoCtrl.text.trim().isEmpty || _artGenero == null) {
+      _extraerFechaYGeneroDeCurp(a.curp);
+    }
+  }
+
+  void _extraerFechaYGeneroDeCurp(String rawCurp) {
+    final curp = rawCurp.trim().toUpperCase();
+    if (curp.length >= 10) {
+      final yearStr = curp.substring(4, 6);
+      final monthStr = curp.substring(6, 8);
+      final dayStr = curp.substring(8, 10);
+      final yearInt = int.tryParse(yearStr);
+      final monthInt = int.tryParse(monthStr);
+      final dayInt = int.tryParse(dayStr);
+
+      if (yearInt != null &&
+          monthInt != null &&
+          dayInt != null &&
+          monthInt >= 1 &&
+          monthInt <= 12 &&
+          dayInt >= 1 &&
+          dayInt <= 31) {
+        final currentYearShort = DateTime.now().year % 100;
+        final fullYear = (yearInt > currentYearShort)
+            ? 1900 + yearInt
+            : 2000 + yearInt;
+        final formattedDate =
+            "$fullYear-${monthStr.padLeft(2, '0')}-${dayStr.padLeft(2, '0')}";
+        if (_artFechaNacimientoCtrl.text.trim().isEmpty) {
+          _artFechaNacimientoCtrl.text = formattedDate;
+        }
+      }
+
+      if (curp.length >= 11 && _artGenero == null) {
+        final generoChar = curp.substring(10, 11);
+        if (generoChar == 'M') {
+          _artGenero = 'F';
+        } else if (generoChar == 'H') {
+          _artGenero = 'M';
+        }
+      }
+    }
   }
 
   void _limpiarCamposArtesano() {
@@ -554,14 +598,20 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
         ),
       );
     } else {
+      final queryTrim = query.trim();
+      final esPosibleCurp = int.tryParse(queryTrim) == null;
+      final curpInicial = esPosibleCurp ? queryTrim.toUpperCase() : '';
       setState(() {
         _selectedArtesano = null;
         _esNuevoArtesano = true;
         _limpiarCamposArtesano();
-        if (int.tryParse(query.trim()) == null) {
-          _artCurpCtrl.text = query.trim().toUpperCase();
+        if (esPosibleCurp) {
+          _artCurpCtrl.text = curpInicial;
         }
       });
+      if (esPosibleCurp && curpInicial.isNotEmpty) {
+        _autocompletarDesdeCurp(curpInicial, concurso);
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -834,7 +884,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
       _p1CategoriaId = null;
       _p1SubcategoriaId = null;
       _p1CostoCtrl.clear();
-      _p1TiempoCtrl.text = '1.0';
+      _p1TiempoCtrl.clear();
       _p1Plazo = 'semanas';
       _p1MaterialCtrl.clear();
       _p1DescripcionCtrl.clear();
@@ -845,7 +895,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
       _p2CategoriaId = null;
       _p2SubcategoriaId = null;
       _p2CostoCtrl.clear();
-      _p2TiempoCtrl.text = '1.0';
+      _p2TiempoCtrl.clear();
       _p2Plazo = 'semanas';
       _p2MaterialCtrl.clear();
       _p2DescripcionCtrl.clear();
@@ -1511,8 +1561,8 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                         const SizedBox(width: 12),
                         Expanded(
                           flex: 2,
-                          child: DropdownButtonFormField<String?>(
-                            key: ValueKey('art_genero_$_artGenero'),
+                          child: KeySelectableDropdownFormField<String?>(
+                            key: const ValueKey('art_genero'),
                             initialValue: _artGenero,
                             decoration: const InputDecoration(
                               labelText: 'Género *',
@@ -1581,8 +1631,8 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: DropdownButtonFormField<int?>(
-                            key: ValueKey('art_etnia_$safeEtniaId'),
+                          child: KeySelectableDropdownFormField<int?>(
+                            key: const ValueKey('art_etnia'),
                             initialValue: safeEtniaId,
                             decoration: const InputDecoration(
                               labelText: 'Etnia *',
@@ -1604,8 +1654,8 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: DropdownButtonFormField<int?>(
-                            key: ValueKey('art_civil_$safeEstadoCivilId'),
+                          child: KeySelectableDropdownFormField<int?>(
+                            key: const ValueKey('art_civil'),
                             initialValue: safeEstadoCivilId,
                             decoration: const InputDecoration(
                               labelText: 'Estado Civil *',
@@ -1980,8 +2030,8 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                       const SizedBox(width: 16),
                       Expanded(
                         flex: 2,
-                        child: DropdownButtonFormField<int?>(
-                          key: ValueKey('p1_rama_$safeP1RamaId'),
+                        child: KeySelectableDropdownFormField<int?>(
+                          key: const ValueKey('p1_rama'),
                           initialValue: safeP1RamaId,
                           decoration: const InputDecoration(
                             labelText: 'Rama Artesanal *',
@@ -2005,9 +2055,9 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                   Row(
                     children: [
                       Expanded(
-                        child: DropdownButtonFormField<int?>(
+                        child: KeySelectableDropdownFormField<int?>(
                           key: ValueKey(
-                            'p1_cat_${concurso.id}_$safeP1CategoriaId',
+                            'p1_cat_${concurso.id}',
                           ),
                           initialValue: safeP1CategoriaId,
                           decoration: const InputDecoration(
@@ -2033,9 +2083,9 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                       ),
                       const SizedBox(width: 16),
                       Expanded(
-                        child: DropdownButtonFormField<int?>(
+                        child: KeySelectableDropdownFormField<int?>(
                           key: ValueKey(
-                            'p1_sub_${safeP1CategoriaId}_$safeP1SubcategoriaId',
+                            'p1_sub_$safeP1CategoriaId',
                           ),
                           initialValue: safeP1SubcategoriaId,
                           decoration: const InputDecoration(
@@ -2124,16 +2174,19 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                       Expanded(
                         child: TextFormField(
                           controller: _p1TiempoCtrl,
-                          keyboardType: TextInputType.number,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           decoration: const InputDecoration(
                             labelText: 'Tiempo Elaboración *',
                           ),
+                          validator: (v) => v == null || v.trim().isEmpty
+                              ? 'Requerido'
+                              : null,
                         ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
-                        child: DropdownButtonFormField<String>(
-                          key: ValueKey('p1_plazo_$safeP1Plazo'),
+                        child: KeySelectableDropdownFormField<String>(
+                          key: const ValueKey('p1_plazo'),
                           initialValue: safeP1Plazo,
                           decoration: const InputDecoration(
                             labelText: 'Plazo *',
@@ -2237,8 +2290,8 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                         const SizedBox(width: 16),
                         Expanded(
                           flex: 2,
-                          child: DropdownButtonFormField<int?>(
-                            key: ValueKey('p2_rama_$safeP2RamaId'),
+                          child: KeySelectableDropdownFormField<int?>(
+                            key: const ValueKey('p2_rama'),
                             initialValue: safeP2RamaId,
                             decoration: const InputDecoration(
                               labelText: 'Rama Artesanal 2 *',
@@ -2264,9 +2317,9 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                     Row(
                       children: [
                         Expanded(
-                          child: DropdownButtonFormField<int?>(
+                          child: KeySelectableDropdownFormField<int?>(
                             key: ValueKey(
-                              'p2_cat_${concurso.id}_$safeP2CategoriaId',
+                              'p2_cat_${concurso.id}',
                             ),
                             initialValue: safeP2CategoriaId,
                             decoration: const InputDecoration(
@@ -2294,9 +2347,9 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: DropdownButtonFormField<int?>(
+                          child: KeySelectableDropdownFormField<int?>(
                             key: ValueKey(
-                              'p2_sub_${safeP2CategoriaId}_$safeP2SubcategoriaId',
+                              'p2_sub_$safeP2CategoriaId',
                             ),
                             initialValue: safeP2SubcategoriaId,
                             decoration: const InputDecoration(
@@ -2382,15 +2435,19 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                         Expanded(
                           child: TextFormField(
                             controller: _p2TiempoCtrl,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
                             decoration: const InputDecoration(
                               labelText: 'Tiempo 2 *',
                             ),
+                            validator: (v) => _incluirPieza2 && (v == null || v.trim().isEmpty)
+                                ? 'Requerido'
+                                : null,
                           ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: DropdownButtonFormField<String>(
-                            key: ValueKey('p2_plazo_$safeP2Plazo'),
+                          child: KeySelectableDropdownFormField<String>(
+                            key: const ValueKey('p2_plazo'),
                             initialValue: safeP2Plazo,
                             decoration: const InputDecoration(
                               labelText: 'Plazo 2 *',

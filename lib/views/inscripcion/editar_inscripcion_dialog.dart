@@ -11,6 +11,7 @@ import '../../providers/inscripcion_provider.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/data/municipios_data.dart';
+import '../common/key_selectable_dropdown_form_field.dart';
 import '../common/searchable_select_form_field.dart';
 
 class EditarInscripcionDialog extends ConsumerStatefulWidget {
@@ -169,7 +170,7 @@ class _EditarInscripcionDialogState
       text: p1 != null ? p1.costoProduccion.toStringAsFixed(2) : '0.00',
     );
     _p1TiempoCtrl = TextEditingController(
-      text: p1 != null ? p1.tiempoElaboracion.toString() : '1.0',
+      text: p1 != null ? p1.tiempoElaboracion.toString() : '',
     );
     _p1Plazo = p1?.plazoElaboracion ?? 'semanas';
     _p1MaterialCtrl = TextEditingController(
@@ -187,7 +188,7 @@ class _EditarInscripcionDialogState
       text: p2 != null ? p2.costoProduccion.toStringAsFixed(2) : '0.00',
     );
     _p2TiempoCtrl = TextEditingController(
-      text: p2 != null ? p2.tiempoElaboracion.toString() : '1.0',
+      text: p2 != null ? p2.tiempoElaboracion.toString() : '',
     );
     _p2Plazo = p2?.plazoElaboracion ?? 'semanas';
     _p2MaterialCtrl = TextEditingController(
@@ -874,8 +875,8 @@ class _EditarInscripcionDialogState
                   const SizedBox(width: 16),
                   Expanded(
                     flex: 2,
-                    child: DropdownButtonFormField<String?>(
-                      key: ValueKey('edit_art_genero_$_artGenero'),
+                    child: KeySelectableDropdownFormField<String?>(
+                      key: const ValueKey('edit_art_genero'),
                       initialValue: _artGenero,
                       decoration: const InputDecoration(
                         labelText: 'Género *',
@@ -947,8 +948,8 @@ class _EditarInscripcionDialogState
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: DropdownButtonFormField<int?>(
-                      key: ValueKey('edit_art_etnia_$safeEtniaId'),
+                    child: KeySelectableDropdownFormField<int?>(
+                      key: const ValueKey('edit_art_etnia'),
                       initialValue: safeEtniaId,
                       decoration: const InputDecoration(labelText: 'Etnia *'),
                       items: _etnias
@@ -969,8 +970,8 @@ class _EditarInscripcionDialogState
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: DropdownButtonFormField<int?>(
-                      key: ValueKey('edit_art_civil_$safeEstadoCivilId'),
+                    child: KeySelectableDropdownFormField<int?>(
+                      key: const ValueKey('edit_art_civil'),
                       initialValue: safeEstadoCivilId,
                       decoration: const InputDecoration(
                         labelText: 'Estado Civil *',
@@ -1367,8 +1368,8 @@ class _EditarInscripcionDialogState
                   const SizedBox(width: 16),
                   Expanded(
                     flex: 2,
-                    child: DropdownButtonFormField<int?>(
-                      key: ValueKey('edit_p1_rama_$safeP1RamaId'),
+                    child: KeySelectableDropdownFormField<int?>(
+                      key: const ValueKey('edit_p1_rama'),
                       initialValue: safeP1RamaId,
                       decoration: const InputDecoration(
                         labelText: 'Rama Artesanal *',
@@ -1394,9 +1395,9 @@ class _EditarInscripcionDialogState
               Row(
                 children: [
                   Expanded(
-                    child: DropdownButtonFormField<int?>(
+                    child: KeySelectableDropdownFormField<int?>(
                       key: ValueKey(
-                        'edit_p1_cat_${widget.concurso.id}_$safeP1CategoriaId',
+                        'edit_p1_cat_${widget.concurso.id}',
                       ),
                       initialValue: safeP1CategoriaId,
                       decoration: const InputDecoration(
@@ -1424,9 +1425,9 @@ class _EditarInscripcionDialogState
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: DropdownButtonFormField<int?>(
+                    child: KeySelectableDropdownFormField<int?>(
                       key: ValueKey(
-                        'edit_p1_sub_${safeP1CategoriaId}_$safeP1SubcategoriaId',
+                        'edit_p1_sub_$safeP1CategoriaId',
                       ),
                       initialValue: safeP1SubcategoriaId,
                       decoration: const InputDecoration(
@@ -1522,8 +1523,8 @@ class _EditarInscripcionDialogState
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: DropdownButtonFormField<String>(
-                      key: ValueKey('edit_p1_plazo_$safeP1Plazo'),
+                    child: KeySelectableDropdownFormField<String>(
+                      key: const ValueKey('edit_p1_plazo'),
                       initialValue: safeP1Plazo,
                       decoration: const InputDecoration(labelText: 'Plazo *'),
                       items: const [
@@ -1653,8 +1654,8 @@ class _EditarInscripcionDialogState
                     const SizedBox(width: 16),
                     Expanded(
                       flex: 2,
-                      child: DropdownButtonFormField<int?>(
-                        key: ValueKey('edit_p2_rama_$safeP2RamaId'),
+                      child: KeySelectableDropdownFormField<int?>(
+                        key: const ValueKey('edit_p2_rama'),
                         initialValue: safeP2RamaId,
                         decoration: const InputDecoration(
                           labelText: 'Rama Artesanal 2 *',
@@ -1681,9 +1682,9 @@ class _EditarInscripcionDialogState
                 Row(
                   children: [
                     Expanded(
-                      child: DropdownButtonFormField<int?>(
+                      child: KeySelectableDropdownFormField<int?>(
                         key: ValueKey(
-                          'edit_p2_cat_${widget.concurso.id}_$safeP2CategoriaId',
+                          'edit_p2_cat_${widget.concurso.id}',
                         ),
                         initialValue: safeP2CategoriaId,
                         decoration: const InputDecoration(
@@ -1712,9 +1713,9 @@ class _EditarInscripcionDialogState
                     ),
                     const SizedBox(width: 16),
                     Expanded(
-                      child: DropdownButtonFormField<int?>(
+                      child: KeySelectableDropdownFormField<int?>(
                         key: ValueKey(
-                          'edit_p2_sub_${safeP2CategoriaId}_$safeP2SubcategoriaId',
+                          'edit_p2_sub_$safeP2CategoriaId',
                         ),
                         initialValue: safeP2SubcategoriaId,
                         decoration: const InputDecoration(
@@ -1811,8 +1812,8 @@ class _EditarInscripcionDialogState
                     ),
                     const SizedBox(width: 16),
                     Expanded(
-                      child: DropdownButtonFormField<String>(
-                        key: ValueKey('edit_p2_plazo_$safeP2Plazo'),
+                      child: KeySelectableDropdownFormField<String>(
+                        key: const ValueKey('edit_p2_plazo'),
                         initialValue: safeP2Plazo,
                         decoration: const InputDecoration(
                           labelText: 'Plazo 2 *',
