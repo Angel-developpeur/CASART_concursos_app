@@ -19,6 +19,7 @@ import '../premios/acta_ganadores_dialog.dart';
 import '../common/excel_export_dropdown.dart';
 import '../common/key_selectable_dropdown_form_field.dart';
 import '../common/searchable_select_form_field.dart';
+import '../common/autocomplete_text_form_field.dart';
 
 class InscripcionView extends ConsumerStatefulWidget {
   const InscripcionView({super.key});
@@ -112,6 +113,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
   List<Map<String, dynamic>> _ramas = [];
   List<Map<String, dynamic>> _etnias = [];
   List<Map<String, dynamic>> _estadosCiviles = [];
+  Map<String, List<String>> _sugerencias = const {};
 
   bool _isSaving = false;
   int? _lastConcursoId;
@@ -128,12 +130,14 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
     final ramas = await repo.getRamasArtesanales();
     final etnias = await repo.getEtnias();
     final estadosCiviles = await repo.getEstadosCiviles();
+    final sugerencias = await repo.getSugerenciasFormulario();
 
     if (mounted) {
       setState(() {
         _ramas = ramas;
         _etnias = etnias;
         _estadosCiviles = estadosCiviles;
+        _sugerencias = sugerencias;
       });
     }
   }
@@ -841,7 +845,9 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
       ref.invalidate(registrosConcursoProvider);
       ref.invalidate(nextFolioProvider);
 
-      // Limpiar formulario
+      // Limpiar formulario y actualizar sugerencias de autocompletado
+      _limpiarFormulario();
+      _loadCatalogos();
       _limpiarFormulario();
 
       if (mounted) {
@@ -1483,8 +1489,9 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: TextFormField(
+                          child: AutocompleteTextFormField(
                             controller: _artApPaternoCtrl,
+                            suggestions: _sugerencias['ap_paterno'] ?? const [],
                             decoration: const InputDecoration(
                               labelText: 'Primer Apellido *',
                             ),
@@ -1495,8 +1502,9 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: TextFormField(
+                          child: AutocompleteTextFormField(
                             controller: _artApMaternoCtrl,
+                            suggestions: _sugerencias['ap_materno'] ?? const [],
                             decoration: const InputDecoration(
                               labelText: 'Segundo Apellido (Opcional)',
                             ),
@@ -1930,8 +1938,9 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: TextFormField(
+                          child: AutocompleteTextFormField(
                             controller: _artCodigoPostalCtrl,
+                            suggestions: _sugerencias['cp'] ?? const [],
                             keyboardType: TextInputType.number,
                             inputFormatters: [
                               FilteringTextInputFormatter.digitsOnly,
@@ -1961,8 +1970,9 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                       children: [
                         Expanded(
                           flex: 3,
-                          child: TextFormField(
+                          child: AutocompleteTextFormField(
                             controller: _artCalleCtrl,
+                            suggestions: _sugerencias['calle'] ?? const [],
                             decoration: const InputDecoration(
                               labelText: 'Calle (Opcional)',
                               prefixIcon: Icon(Icons.signpost_outlined),
@@ -1972,8 +1982,10 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                         const SizedBox(width: 12),
                         Expanded(
                           flex: 2,
-                          child: TextFormField(
+                          child: AutocompleteTextFormField(
                             controller: _artNumExteriorCtrl,
+                            suggestions:
+                                _sugerencias['numero_exterior'] ?? const [],
                             decoration: const InputDecoration(
                               labelText: 'Número Exterior (Opcional)',
                             ),
@@ -1982,8 +1994,9 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                         const SizedBox(width: 12),
                         Expanded(
                           flex: 3,
-                          child: TextFormField(
+                          child: AutocompleteTextFormField(
                             controller: _artColoniaCtrl,
+                            suggestions: _sugerencias['colonia'] ?? const [],
                             decoration: const InputDecoration(
                               labelText: 'Colonia (Opcional)',
                             ),
@@ -2217,8 +2230,10 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                     ],
                   ),
                   const SizedBox(height: 16),
-                  TextFormField(
+                  AutocompleteTextFormField(
                     controller: _p1MaterialCtrl,
+                    suggestions:
+                        _sugerencias['material_elaboracion'] ?? const [],
                     decoration: const InputDecoration(
                       labelText: 'Material de Elaboración *',
                       hintText: 'Ej: Barro, pino, cobre martillado...',
@@ -2478,8 +2493,10 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                       ],
                     ),
                     const SizedBox(height: 16),
-                    TextFormField(
+                    AutocompleteTextFormField(
                       controller: _p2MaterialCtrl,
+                      suggestions:
+                          _sugerencias['material_elaboracion'] ?? const [],
                       decoration: const InputDecoration(
                         labelText: 'Material de Elaboración 2 *',
                       ),

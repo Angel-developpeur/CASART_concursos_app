@@ -152,6 +152,20 @@ class ApiClient {
   // ==========================================
   // CATÁLOGOS Y ARTESANOS
   // ==========================================
+  Future<Map<String, List<String>>> getSugerenciasFormulario() async {
+    final res = await _client.get(
+      Uri.parse('$baseUrl/sugerencias'),
+      headers: _headers,
+    );
+    if (res.statusCode != 200) {
+      throw Exception('Error al obtener sugerencias: ${res.body}');
+    }
+    final raw = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    return raw.map(
+      (k, v) => MapEntry(k, (v as List).map((e) => e.toString()).toList()),
+    );
+  }
+  // ==========================================
   Future<Map<String, dynamic>> getCatalogos() async {
     final res = await _client.get(
       Uri.parse('$baseUrl/catalogos'),

@@ -42,6 +42,73 @@ class ArtesanoRepository {
     return MunicipiosData.municipios;
   }
 
+  Future<Map<String, List<String>>> getSugerenciasFormulario() async {
+    if (apiClient != null) {
+      try {
+        return await apiClient!.getSugerenciasFormulario();
+      } catch (_) {
+        return const {
+          'ap_paterno': [],
+          'ap_materno': [],
+          'cp': [],
+          'calle': [],
+          'numero_exterior': [],
+          'colonia': [],
+          'material_elaboracion': [],
+        };
+      }
+    }
+
+    final db = await _dbHelper.database;
+
+    Future<List<String>> fetchDistinct(
+      String table,
+      String column, {
+      int limit = 300,
+    }) async {
+      try {
+        final rows = await db.rawQuery('''
+          SELECT TRIM($column) AS val
+          FROM $table
+          WHERE $column IS NOT NULL AND TRIM($column) != ''
+          GROUP BY UPPER(TRIM($column))
+          ORDER BY COUNT(*) DESC, MAX(id) DESC
+          LIMIT $limit
+        ''');
+        return rows
+            .map((r) => (r['val'] as String?)?.trim() ?? '')
+            .where((v) => v.isNotEmpty)
+            .toList();
+      } catch (_) {
+        return [];
+      }
+    }
+
+    final results = await Future.wait([
+      fetchDistinct('artesano', 'ap_paterno'),
+      fetchDistinct('artesano', 'ap_materno'),
+      fetchDistinct('residencia', 'cp'),
+      fetchDistinct('residencia', 'calle'),
+      fetchDistinct('residencia', 'numero_exterior'),
+      fetchDistinct('residencia', 'colonia'),
+      fetchDistinct('artesania_concurso', 'material_elaboracion'),
+    ]);
+
+    final cpValid = results[2]
+        .where((cp) => RegExp(r'^\d{5}$').hasMatch(cp))
+        .toList();
+
+    return {
+      'ap_paterno': results[0],
+      'ap_materno': results[1],
+      'cp': cpValid,
+      'calle': results[3],
+      'numero_exterior': results[4],
+      'colonia': results[5],
+      'material_elaboracion': results[6],
+    };
+  }
+
   List<String> getLocalidades(String? municipio) {
     return MunicipiosData.obtenerLocalidades(municipio);
   }

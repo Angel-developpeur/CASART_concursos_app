@@ -13,6 +13,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/data/municipios_data.dart';
 import '../common/key_selectable_dropdown_form_field.dart';
 import '../common/searchable_select_form_field.dart';
+import '../common/autocomplete_text_form_field.dart';
 
 class EditarInscripcionDialog extends ConsumerStatefulWidget {
   final RegistroConcurso registro;
@@ -113,6 +114,7 @@ class _EditarInscripcionDialogState
   List<Map<String, dynamic>> _ramas = [];
   List<Map<String, dynamic>> _etnias = [];
   List<Map<String, dynamic>> _estadosCiviles = [];
+  Map<String, List<String>> _sugerencias = const {};
 
   bool _isLoadingCatalogos = true;
   bool _isSaving = false;
@@ -205,12 +207,14 @@ class _EditarInscripcionDialogState
       final ramas = await repo.getRamasArtesanales();
       final etnias = await repo.getEtnias();
       final estadosCiviles = await repo.getEstadosCiviles();
+      final sugerencias = await repo.getSugerenciasFormulario();
 
       if (mounted) {
         setState(() {
           _ramas = ramas;
           _etnias = etnias;
           _estadosCiviles = estadosCiviles;
+          _sugerencias = sugerencias;
           _isLoadingCatalogos = false;
         });
       }
@@ -796,8 +800,9 @@ class _EditarInscripcionDialogState
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: TextFormField(
+                    child: AutocompleteTextFormField(
                       controller: _artApPaternoCtrl,
+                      suggestions: _sugerencias['ap_paterno'] ?? const [],
                       readOnly: _isReadOnly,
                       decoration: const InputDecoration(
                         labelText: 'Primer Apellido *',
@@ -808,8 +813,9 @@ class _EditarInscripcionDialogState
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: TextFormField(
+                    child: AutocompleteTextFormField(
                       controller: _artApMaternoCtrl,
+                      suggestions: _sugerencias['ap_materno'] ?? const [],
                       readOnly: _isReadOnly,
                       decoration: const InputDecoration(
                         labelText: 'Segundo Apellido (Opcional)',
@@ -1244,8 +1250,9 @@ class _EditarInscripcionDialogState
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: TextFormField(
+                    child: AutocompleteTextFormField(
                       controller: _artCodigoPostalCtrl,
+                      suggestions: _sugerencias['cp'] ?? const [],
                       readOnly: _isReadOnly,
                       keyboardType: TextInputType.number,
                       inputFormatters: [
@@ -1257,9 +1264,12 @@ class _EditarInscripcionDialogState
                         prefixIcon: Icon(Icons.markunread_mailbox_outlined),
                       ),
                       validator: (v) {
-                        if (v == null || v.trim().isEmpty)
+                        if (v == null || v.trim().isEmpty) {
                           return 'El Código Postal es obligatorio';
-                        if (v.trim().length != 5) return 'Debe tener 5 dígitos';
+                        }
+                        if (v.trim().length != 5) {
+                          return 'Debe tener 5 dígitos';
+                        }
                         return null;
                       },
                     ),
@@ -1271,8 +1281,9 @@ class _EditarInscripcionDialogState
                 children: [
                   Expanded(
                     flex: 3,
-                    child: TextFormField(
+                    child: AutocompleteTextFormField(
                       controller: _artCalleCtrl,
+                      suggestions: _sugerencias['calle'] ?? const [],
                       readOnly: _isReadOnly,
                       decoration: const InputDecoration(
                         labelText: 'Calle (Opcional)',
@@ -1283,8 +1294,9 @@ class _EditarInscripcionDialogState
                   const SizedBox(width: 16),
                   Expanded(
                     flex: 2,
-                    child: TextFormField(
+                    child: AutocompleteTextFormField(
                       controller: _artNumExteriorCtrl,
+                      suggestions: _sugerencias['numero_exterior'] ?? const [],
                       readOnly: _isReadOnly,
                       decoration: const InputDecoration(
                         labelText: 'Número Exterior (Opcional)',
@@ -1294,8 +1306,9 @@ class _EditarInscripcionDialogState
                   const SizedBox(width: 16),
                   Expanded(
                     flex: 3,
-                    child: TextFormField(
+                    child: AutocompleteTextFormField(
                       controller: _artColoniaCtrl,
+                      suggestions: _sugerencias['colonia'] ?? const [],
                       readOnly: _isReadOnly,
                       decoration: const InputDecoration(
                         labelText: 'Colonia (Opcional)',
@@ -1546,8 +1559,9 @@ class _EditarInscripcionDialogState
                 ],
               ),
               const SizedBox(height: 16),
-              TextFormField(
+              AutocompleteTextFormField(
                 controller: _p1MaterialCtrl,
+                suggestions: _sugerencias['material_elaboracion'] ?? const [],
                 readOnly: _isReadOnly,
                 decoration: const InputDecoration(
                   labelText: 'Material de Elaboración *',
@@ -1840,8 +1854,9 @@ class _EditarInscripcionDialogState
                   ],
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
+                AutocompleteTextFormField(
                   controller: _p2MaterialCtrl,
+                  suggestions: _sugerencias['material_elaboracion'] ?? const [],
                   readOnly: _isReadOnly,
                   decoration: const InputDecoration(
                     labelText: 'Material de Elaboración 2 *',

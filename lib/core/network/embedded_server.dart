@@ -76,6 +76,15 @@ class EmbeddedServer {
     });
 
     // ==========================================
+    router.get('/api/sugerencias', (Request req) async {
+      final sugerencias = await artesanoRepo.getSugerenciasFormulario();
+      return Response.ok(
+        jsonEncode(sugerencias),
+        headers: {'Content-Type': 'application/json'},
+      );
+    });
+
+    // ==========================================
     // 3. CONCURSOS
     // ==========================================
     router.get('/api/concursos', (Request req) async {
