@@ -187,7 +187,7 @@ class _EditarInscripcionDialogState
     _p2CategoriaId = p2?.idCategoriaConcurso;
     _p2SubcategoriaId = p2?.idSubCategoriaConcurso;
     _p2CostoCtrl = TextEditingController(
-      text: p2 != null ? p2.costoProduccion.toStringAsFixed(2) : '0.00',
+      text: p2 != null ? p2.costoProduccion.toStringAsFixed(2) : '',
     );
     _p2TiempoCtrl = TextEditingController(
       text: p2 != null ? p2.tiempoElaboracion.toString() : '',
@@ -380,14 +380,17 @@ class _EditarInscripcionDialogState
           (_p2RamaId != null && _ramas.any((r) => r['id'] == _p2RamaId))
           ? _p2RamaId
           : null;
+      final p2CostoVal = double.tryParse(_p2CostoCtrl.text.trim());
       if (_p2NombreCtrl.text.trim().isEmpty ||
           safeP2Cat == null ||
-          safeP2Rama == null) {
+          safeP2Rama == null ||
+          p2CostoVal == null ||
+          p2CostoVal <= 0) {
         _tabController.animateTo(2);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'Completa nombre, categoría y rama válidas para la Pieza 2.',
+              'Completa nombre, categoría, rama y un costo de producción válido para la Pieza 2.',
             ),
             backgroundColor: Colors.red,
           ),

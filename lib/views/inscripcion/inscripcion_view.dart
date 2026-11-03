@@ -722,13 +722,16 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
           (_p2RamaId != null && _ramas.any((r) => r['id'] == _p2RamaId))
           ? _p2RamaId
           : null;
+      final p2CostoVal = double.tryParse(_p2CostoCtrl.text.trim());
       if (_p2NombreCtrl.text.trim().isEmpty ||
           safeP2Cat == null ||
-          safeP2Rama == null) {
+          safeP2Rama == null ||
+          p2CostoVal == null ||
+          p2CostoVal <= 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'Completa nombre, categoría y rama válidas para la Pieza 2.',
+              'Completa nombre, categoría, rama y un costo de producción válido para la Pieza 2.',
             ),
             backgroundColor: Colors.red,
           ),
@@ -2138,9 +2141,16 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                             prefixText: '\$ ',
                           ),
                           onChanged: (_) => setState(() {}),
-                          validator: (v) => v == null || v.trim().isEmpty
-                              ? 'Requerido'
-                              : null,
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) {
+                              return 'Requerido';
+                            }
+                            final monto = double.tryParse(v.trim());
+                            if (monto == null || monto <= 0) {
+                              return 'Monto inválido';
+                            }
+                            return null;
+                          },
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -2404,6 +2414,17 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                               prefixText: '\$ ',
                             ),
                             onChanged: (_) => setState(() {}),
+                            validator: (v) {
+                              if (!_incluirPieza2) return null;
+                              if (v == null || v.trim().isEmpty) {
+                                return 'Requerido';
+                              }
+                              final monto = double.tryParse(v.trim());
+                              if (monto == null || monto <= 0) {
+                                return 'Monto inválido';
+                              }
+                              return null;
+                            },
                           ),
                         ),
                         const SizedBox(width: 16),
