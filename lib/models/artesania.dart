@@ -30,7 +30,7 @@ class Artesania {
     required this.plazoElaboracion,
     required this.materialElaboracion,
     required this.descripcion,
-    required this.idRamaArtesanal,
+    this.idRamaArtesanal = 1,
     this.ramaNombre,
     this.idImagen,
     this.idPremio,
@@ -92,8 +92,8 @@ class Artesania {
     };
   }
 
-
-  factory Artesania.fromMap(Map<String, dynamic> map, {
+  factory Artesania.fromMap(
+    Map<String, dynamic> map, {
     String? ramaNombre,
     String? categoriaNombre,
     String? subcategoriaNombre,
@@ -119,7 +119,8 @@ class Artesania {
       idCategoriaConcurso: map['id_categoria_concurso'] as int? ?? 1,
       categoriaNombre: categoriaNombre ?? map['categoria_nombre'] as String?,
       idSubCategoriaConcurso: map['id_sub_categoria_concurso'] as int?,
-      subcategoriaNombre: subcategoriaNombre ?? map['subcategoria_nombre'] as String?,
+      subcategoriaNombre:
+          subcategoriaNombre ?? map['subcategoria_nombre'] as String?,
       createdAt: map['created_at'] as String?,
       updatedAt: map['updated_at'] as String?,
     );
@@ -164,7 +165,8 @@ class Artesania {
       premioNombre: premioNombre ?? this.premioNombre,
       idCategoriaConcurso: idCategoriaConcurso ?? this.idCategoriaConcurso,
       categoriaNombre: categoriaNombre ?? this.categoriaNombre,
-      idSubCategoriaConcurso: idSubCategoriaConcurso ?? this.idSubCategoriaConcurso,
+      idSubCategoriaConcurso:
+          idSubCategoriaConcurso ?? this.idSubCategoriaConcurso,
       subcategoriaNombre: subcategoriaNombre ?? this.subcategoriaNombre,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

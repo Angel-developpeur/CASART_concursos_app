@@ -8,6 +8,7 @@ class ConcursoEstadisticas {
   final Concurso concurso;
   final int totalArtesanos;
   final int totalMunicipios;
+  final int totalComunidades;
   final int totalPiezas;
   final int totalCategorias;
   final int totalSubcategorias;
@@ -18,12 +19,14 @@ class ConcursoEstadisticas {
   final Map<String, int> etniasConteo;
   final Map<String, int> ramasConteo;
   final Map<String, int> municipiosConteo;
+  final Map<String, int> comunidadesConteo;
   final List<Categoria> categoriasConcurso;
 
   const ConcursoEstadisticas({
     required this.concurso,
     required this.totalArtesanos,
     required this.totalMunicipios,
+    this.totalComunidades = 0,
     required this.totalPiezas,
     required this.totalCategorias,
     required this.totalSubcategorias,
@@ -34,6 +37,7 @@ class ConcursoEstadisticas {
     required this.etniasConteo,
     required this.ramasConteo,
     required this.municipiosConteo,
+    this.comunidadesConteo = const {},
     required this.categoriasConcurso,
   });
 
@@ -111,6 +115,26 @@ class ConcursoEstadisticas {
       totalMunicipios = municipiosConteo.length;
     }
 
+    // 5.1 Comunidades participantes de los artesanos
+    final Map<String, int> rawComunidadesConteo = {};
+    for (final art in artesanosMap.values) {
+      final com = art.localidad.trim();
+      if (com.isNotEmpty) {
+        final comNorm = _toTitleCase(com);
+        rawComunidadesConteo[comNorm] = (rawComunidadesConteo[comNorm] ?? 0) + 1;
+      } else {
+        rawComunidadesConteo['Sin especificar'] =
+            (rawComunidadesConteo['Sin especificar'] ?? 0) + 1;
+      }
+    }
+    final comunidadesConteo = _sortDescending(rawComunidadesConteo);
+    final validComunidades =
+        comunidadesConteo.keys.where((c) => c != 'Sin especificar').toList();
+    int totalComunidades = validComunidades.length;
+    if (totalComunidades == 0 && comunidadesConteo.isNotEmpty) {
+      totalComunidades = comunidadesConteo.length;
+    }
+
     // 6. Categorías y Subcategorías
     final categoriasConcurso = concurso.categorias;
     final int totalCategorias = categoriasConcurso.length;
@@ -137,6 +161,7 @@ class ConcursoEstadisticas {
       concurso: concurso,
       totalArtesanos: totalArtesanos,
       totalMunicipios: totalMunicipios,
+      totalComunidades: totalComunidades,
       totalPiezas: totalPiezas,
       totalCategorias: totalCategorias,
       totalSubcategorias: totalSubcategorias,
@@ -147,6 +172,7 @@ class ConcursoEstadisticas {
       etniasConteo: etniasConteo,
       ramasConteo: ramasConteo,
       municipiosConteo: municipiosConteo,
+      comunidadesConteo: comunidadesConteo,
       categoriasConcurso: categoriasConcurso,
     );
   }

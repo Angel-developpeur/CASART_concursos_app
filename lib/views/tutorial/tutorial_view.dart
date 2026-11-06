@@ -217,7 +217,8 @@ class _TutorialViewState extends ConsumerState<TutorialView> {
       backgroundColor: const Color(0xFFF8F9FA),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final isNarrow = constraints.maxWidth < 900;
+          final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+          final isNarrow = (constraints.maxWidth / textScale) < 900;
 
           return Column(
             children: [
@@ -377,7 +378,7 @@ class _TutorialViewState extends ConsumerState<TutorialView> {
       children: [
         // Pestañas horizontales para pantallas compactas
         Container(
-          height: 52,
+          height: 60,
           color: Colors.white,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,

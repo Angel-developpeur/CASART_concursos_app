@@ -362,7 +362,7 @@ class EstadisticasConcursoView extends ConsumerWidget {
   }
 
   // ===========================================================================
-  // 3. TARJETAS KPI MÉTRICAS (GRID DE 6 TARJETAS)
+  // 3. TARJETAS KPI MÉTRICAS (GRID DE 7 TARJETAS)
   // ===========================================================================
   Widget _buildKpiGrid(BuildContext context, ConcursoEstadisticas stats, bool isDark) {
     final kpis = [
@@ -382,6 +382,15 @@ class EstadisticasConcursoView extends ConsumerWidget {
         icon: Icons.location_on_outlined,
         iconBgColor: isDark ? const Color(0xFF134E4A) : const Color(0xFFF0FDFA),
         iconColor: const Color(0xFF0D9488),
+      ),
+      _KpiData(
+        title: 'Comunidades Participantes',
+        value: '${stats.totalComunidades}',
+        valueSuffix: ' comunidades',
+        subtitle: 'Localidades de los artesanos',
+        icon: Icons.holiday_village_outlined,
+        iconBgColor: isDark ? const Color(0xFF065F46) : const Color(0xFFECFDF5),
+        iconColor: const Color(0xFF059669),
       ),
       _KpiData(
         title: 'Piezas Inscritas',
@@ -533,7 +542,7 @@ class EstadisticasConcursoView extends ConsumerWidget {
   }
 
   // ===========================================================================
-  // 4. SECCIONES DE DESGLOSE (ETNIA, GÉNERO, MUNICIPIOS, CATEGORÍAS)
+  // 4. SECCIONES DE DESGLOSE (ETNIA, GÉNERO, MUNICIPIOS, COMUNIDADES, CATEGORÍAS)
   // ===========================================================================
   Widget _buildBreakdownSections(BuildContext context, ConcursoEstadisticas stats, bool isDark) {
     return LayoutBuilder(
@@ -543,6 +552,7 @@ class EstadisticasConcursoView extends ConsumerWidget {
         final cardEtnias = _buildEtniasCard(context, stats, isDark);
         final cardGeneroRamas = _buildGeneroRamasCard(context, stats, isDark);
         final cardMunicipios = _buildMunicipiosCard(context, stats, isDark);
+        final cardComunidades = _buildComunidadesCard(context, stats, isDark);
         final cardCategorias = _buildCategoriasCard(context, stats, isDark);
 
         if (isTwoCol) {
@@ -562,9 +572,11 @@ class EstadisticasConcursoView extends ConsumerWidget {
                 children: [
                   Expanded(child: cardMunicipios),
                   const SizedBox(width: 20),
-                  Expanded(child: cardCategorias),
+                  Expanded(child: cardComunidades),
                 ],
               ),
+              const SizedBox(height: 20),
+              cardCategorias,
             ],
           );
         }
@@ -576,6 +588,8 @@ class EstadisticasConcursoView extends ConsumerWidget {
             cardGeneroRamas,
             const SizedBox(height: 20),
             cardMunicipios,
+            const SizedBox(height: 20),
+            cardComunidades,
             const SizedBox(height: 20),
             cardCategorias,
           ],
@@ -1025,6 +1039,130 @@ class EstadisticasConcursoView extends ConsumerWidget {
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                               color: isDark ? const Color(0xFF5EEAD4) : const Color(0xFF0F766E),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // --- TARJETA: COMUNIDADES DE ORIGEN ---
+  Widget _buildComunidadesCard(BuildContext context, ConcursoEstadisticas stats, bool isDark) {
+    final comunidades = stats.comunidadesConteo;
+
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1F2937) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? const Color(0xFF374151) : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  'Comunidades de Origen',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xFF1E293B),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF065F46).withValues(alpha: 0.4) : const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF047857) : const Color(0xFFA7F3D0),
+                  ),
+                ),
+                child: Text(
+                  '${stats.totalComunidades} comunidades',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? const Color(0xFF6EE7B7) : const Color(0xFF047857),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          if (comunidades.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Text(
+                  'No hay comunidades registradas.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic,
+                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade500,
+                  ),
+                ),
+              ),
+            )
+          else
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 280),
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: comunidades.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final entry = comunidades.entries.elementAt(index);
+
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF111827).withValues(alpha: 0.5) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF374151) : const Color(0xFFF1F5F9),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            entry.key,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.grey.shade200 : const Color(0xFF334155),
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF065F46).withValues(alpha: 0.5) : const Color(0xFFD1FAE5),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${entry.value} artesano${entry.value > 1 ? 's' : ''}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? const Color(0xFF6EE7B7) : const Color(0xFF047857),
                             ),
                           ),
                         ),

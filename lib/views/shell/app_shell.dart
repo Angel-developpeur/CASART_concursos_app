@@ -5,6 +5,7 @@ import '../../core/network/network_state.dart';
 import '../../core/network/embedded_server.dart';
 import '../../providers/database_provider.dart';
 import '../../providers/concursos_provider.dart';
+import '../../providers/ui_zoom_provider.dart';
 import '../concursos/concursos_list_view.dart';
 import '../inscripcion/inscripcion_view.dart';
 import '../premios/premios_view.dart';
@@ -303,8 +304,11 @@ class _AppShellState extends ConsumerState<AppShell> {
               children: [
                 // TOP BAR: CONCURSO ACTIVO Y RED MULTIEQUIPO
                 Container(
-                  height: 60,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  constraints: const BoxConstraints(minHeight: 60),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     border: Border(
@@ -320,8 +324,11 @@ class _AppShellState extends ConsumerState<AppShell> {
                   ),
                   child: LayoutBuilder(
                     builder: (context, topBarConstraints) {
-                      final isCompact = topBarConstraints.maxWidth < 720;
-                      final isUltraCompact = topBarConstraints.maxWidth < 540;
+                      final zoomScale = ref.watch(uiZoomProvider);
+                      final effectiveWidth =
+                          topBarConstraints.maxWidth / zoomScale;
+                      final isCompact = effectiveWidth < 980;
+                      final isUltraCompact = effectiveWidth < 680;
 
                       return Row(
                         children: [
@@ -400,7 +407,15 @@ class _AppShellState extends ConsumerState<AppShell> {
                                           child: Text(
                                             isUltraCompact
                                                 ? concurso.nombre
-                                                : 'Concurso Activo: ${concurso.nombre} (${concurso.ejercicio})',
+                                                : (!isCompact &&
+                                                          concurso.lugar !=
+                                                              null &&
+                                                          concurso
+                                                              .lugar!
+                                                              .isNotEmpty
+                                                      ? 'Concurso Activo: ${concurso.nombre} (${concurso.ejercicio}) • ${concurso.lugar}'
+                                                      : 'Concurso Activo: ${concurso.nombre} (${concurso.ejercicio})'),
+                                            maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: const TextStyle(
                                               color: AppTheme.ocreText,
@@ -409,18 +424,6 @@ class _AppShellState extends ConsumerState<AppShell> {
                                             ),
                                           ),
                                         ),
-                                        if (!isCompact &&
-                                            concurso.lugar != null &&
-                                            concurso.lugar!.isNotEmpty) ...[
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            '• ${concurso.lugar}',
-                                            style: const TextStyle(
-                                              color: AppTheme.ocreText,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ],
                                         if (!isUltraCompact) ...[
                                           const SizedBox(width: 8),
                                           Container(
@@ -467,6 +470,10 @@ class _AppShellState extends ConsumerState<AppShell> {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              // CONTROL DE ZOOM DE TEXTO (ACCESIBILIDAD VISUAL)
+                              _buildZoomControl(isUltraCompact),
+                              const SizedBox(width: 8),
+
                               // BOTÓN ESTADO DE RED MULTIEQUIPO (INDICADOR DE IP)
                               if (isUltraCompact)
                                 IconButton(
@@ -634,6 +641,174 @@ class _AppShellState extends ConsumerState<AppShell> {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildZoomControl(bool isUltraCompact) {
+    final zoomScale = ref.watch(uiZoomProvider);
+    final zoomNotifier = ref.read(uiZoomProvider.notifier);
+    final pct = (zoomScale * 100).round();
+    final isZoomed = pct != 100;
+
+    if (isUltraCompact) {
+      return PopupMenuButton<double>(
+        tooltip: 'Tamaño de letra ($pct%)',
+        icon: Icon(
+          Icons.text_fields,
+          size: 20,
+          color: isZoomed ? AppTheme.casart800 : Colors.blueGrey,
+        ),
+        onSelected: zoomNotifier.setZoom,
+        itemBuilder: (ctx) => UiZoomNotifier.zoomSteps.map((step) {
+          final selected = (step - zoomScale).abs() < 0.01;
+          return PopupMenuItem<double>(
+            value: step,
+            child: Row(
+              children: [
+                Icon(
+                  selected ? Icons.radio_button_checked : Icons.radio_button_off,
+                  size: 18,
+                  color: selected ? AppTheme.casart800 : Colors.grey,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  UiZoomNotifier.labelFor(step),
+                  style: TextStyle(
+                    fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                    color: selected ? AppTheme.casart800 : Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      );
+    }
+
+    return Container(
+      constraints: const BoxConstraints(minHeight: 34),
+      decoration: BoxDecoration(
+        color: isZoomed ? AppTheme.casart50 : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isZoomed ? AppTheme.casart300 : Colors.grey.shade300,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Tooltip(
+            message: 'Reducir tamaño de letra (Ctrl + -)',
+            child: InkWell(
+              borderRadius: const BorderRadius.horizontal(
+                left: Radius.circular(7),
+              ),
+              onTap: zoomNotifier.canZoomOut ? zoomNotifier.zoomOut : null,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Text(
+                  'A-',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: zoomNotifier.canZoomOut
+                        ? AppTheme.casart800
+                        : Colors.grey.shade400,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Container(
+            width: 1,
+            height: 18,
+            color: isZoomed ? AppTheme.casart200 : Colors.grey.shade300,
+          ),
+          PopupMenuButton<double>(
+            tooltip: 'Seleccionar tamaño de letra (Ctrl + 0 para restablecer)',
+            onSelected: zoomNotifier.setZoom,
+            itemBuilder: (ctx) => UiZoomNotifier.zoomSteps.map((step) {
+              final selected = (step - zoomScale).abs() < 0.01;
+              return PopupMenuItem<double>(
+                value: step,
+                child: Row(
+                  children: [
+                    Icon(
+                      selected
+                          ? Icons.radio_button_checked
+                          : Icons.radio_button_off,
+                      size: 18,
+                      color: selected ? AppTheme.casart800 : Colors.grey,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      UiZoomNotifier.labelFor(step),
+                      style: TextStyle(
+                        fontWeight:
+                            selected ? FontWeight.bold : FontWeight.normal,
+                        color: selected ? AppTheme.casart800 : Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.text_fields,
+                    size: 14,
+                    color: isZoomed
+                        ? AppTheme.casart800
+                        : Colors.blueGrey.shade700,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$pct%',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: isZoomed
+                          ? AppTheme.casart800
+                          : Colors.blueGrey.shade800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Container(
+            width: 1,
+            height: 18,
+            color: isZoomed ? AppTheme.casart200 : Colors.grey.shade300,
+          ),
+          Tooltip(
+            message: 'Aumentar tamaño de letra (Ctrl + +)',
+            child: InkWell(
+              borderRadius: const BorderRadius.horizontal(
+                right: Radius.circular(7),
+              ),
+              onTap: zoomNotifier.canZoomIn ? zoomNotifier.zoomIn : null,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Text(
+                  'A+',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: zoomNotifier.canZoomIn
+                        ? AppTheme.casart800
+                        : Colors.grey.shade400,
+                  ),
+                ),
+              ),
             ),
           ),
         ],

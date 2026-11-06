@@ -102,7 +102,7 @@ class Artesano {
     String? codigoPostal,
     this.etniaNombre,
     this.estadoCivilNombre,
-  })  : maxNivelAcademico = maxNivelAcademico ?? nivelEducativo,
+  })  : maxNivelAcademico = maxNivelAcademico ?? nivelEducativo ?? '1',
         correo = correo ?? correoElectronico,
         cp = cp ?? codigoPostal;
 
@@ -155,7 +155,7 @@ class Artesano {
       'fecha_nacimiento': fechaNacimiento,
       'genero': genero,
       'finado': finado ? 1 : 0,
-      'max_nivel_academico': maxNivelAcademico ?? '0',
+      'max_nivel_academico': maxNivelAcademico ?? '1',
       'id_imagen': idImagen,
       'id_etnia': idEtnia,
       'id_info_contacto': idInfoContacto ?? this.idInfoContacto,
@@ -221,8 +221,8 @@ class Artesano {
       'fecha_nacimiento': fechaNacimiento,
       'genero': genero,
       'finado': finado ? 1 : 0,
-      'max_nivel_academico': maxNivelAcademico,
-      'nivel_educativo': maxNivelAcademico,
+      'max_nivel_academico': maxNivelAcademico ?? '1',
+      'nivel_educativo': maxNivelAcademico ?? '1',
       'id_imagen': idImagen,
       'id_etnia': idEtnia,
       'id_info_contacto': idInfoContacto,

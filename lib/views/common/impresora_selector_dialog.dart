@@ -701,9 +701,12 @@ class _ImpresoraSelectorDialogState extends State<ImpresoraSelectorDialog> {
                               ),
                             ),
                             if (printer.model != null && printer.model!.isNotEmpty) ...[
-                              Text(
-                                ' • ${printer.model}',
-                                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                              Flexible(
+                                child: Text(
+                                  ' • ${printer.model}',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                                ),
                               ),
                             ],
                           ],

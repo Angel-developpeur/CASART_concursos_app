@@ -100,43 +100,49 @@ class _ComprobanteDialogState extends State<ComprobanteDialog> {
                 children: [
                   const Icon(Icons.print, color: Colors.black87),
                   const SizedBox(width: 10),
-                  Text(
-                    'Cédula de Inscripción - Folio #${widget.registro.folio}',
-                    style: const TextStyle(
-                      color: Colors.black87,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: Text(
+                      'Cédula de Inscripción - Folio #${widget.registro.folio}',
+                      style: const TextStyle(
+                        color: Colors.black87,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.casart50,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: AppTheme.casart200),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.keyboard_outlined,
-                          size: 15,
-                          color: AppTheme.casart800,
-                        ),
-                        SizedBox(width: 6),
-                        Text(
-                          'Ctrl + P para imprimir',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.casart50,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: AppTheme.casart200),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.keyboard_outlined,
+                            size: 15,
                             color: AppTheme.casart800,
                           ),
-                        ),
-                      ],
+                          SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              'Ctrl + P para imprimir',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.casart800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),

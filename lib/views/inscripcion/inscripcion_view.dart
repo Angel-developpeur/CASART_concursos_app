@@ -34,8 +34,12 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
 
   final _formKey = GlobalKey<FormState>();
 
-  // Búsqueda de artesano
+  // Búsqueda de artesano y nodos de foco para atajos de teclado / autofocus
   final _busquedaCurpCtrl = TextEditingController();
+  final _busquedaCurpFocusNode = FocusNode(debugLabel: 'busqueda_curp');
+  final _artNombreFocusNode = FocusNode(debugLabel: 'art_nombre');
+  final _p1NombreFocusNode = FocusNode(debugLabel: 'p1_nombre');
+  final _p2NombreFocusNode = FocusNode(debugLabel: 'p2_nombre');
   Artesano? _selectedArtesano;
   bool _esNuevoArtesano = false;
 
@@ -44,7 +48,6 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
   final _artApPaternoCtrl = TextEditingController();
   final _artApMaternoCtrl = TextEditingController();
   final _artCurpCtrl = TextEditingController();
-  final _artRfcCtrl = TextEditingController();
   final _artFechaNacimientoCtrl = TextEditingController();
   String? _artGenero;
   final _artTelefonoCtrl = TextEditingController();
@@ -58,37 +61,17 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
   final _artCodigoPostalCtrl = TextEditingController();
   int? _artEtniaId;
   int? _artEstadoCivilId;
-  int _artNivelEducativo = 0;
 
-  static const List<String> _nivelesEducativos = [
-    'Ninguno',
-    'Primaria inc.',
-    'Primaria comp.',
-    'Secundaria inc.',
-    'Secundaria comp.',
-    'Prepa inc.',
-    'Prepa comp.',
-    'Universidad inc.',
-    'Universidad comp.',
-    'Posgrado',
-  ];
-
-  static const List<String> _nivelesEducativosDetalle = [
-    'Ninguno (Sin escolaridad)',
-    'Primaria incompleta',
-    'Primaria completa',
-    'Secundaria incompleta',
-    'Secundaria completa',
-    'Preparatoria incompleta',
-    'Preparatoria completa',
-    'Universidad incompleta',
-    'Universidad completa',
-    'Posgrado',
-  ];
+  // Valores fijados (Pin 📌) para conservar entre registros en concursos locales/regionales
+  bool _fijarEtnia = false;
+  int? _pinnedEtniaId;
+  bool _fijarMunicipio = false;
+  String? _pinnedMunicipio;
+  bool _fijarLocalidad = false;
+  String? _pinnedLocalidad;
 
   // Pieza 1
   final _p1NombreCtrl = TextEditingController();
-  int? _p1RamaId;
   int? _p1CategoriaId;
   int? _p1SubcategoriaId;
   final _p1CostoCtrl = TextEditingController();
@@ -100,7 +83,6 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
   // Pieza 2
   bool _incluirPieza2 = false;
   final _p2NombreCtrl = TextEditingController();
-  int? _p2RamaId;
   int? _p2CategoriaId;
   int? _p2SubcategoriaId;
   final _p2CostoCtrl = TextEditingController();
@@ -110,7 +92,6 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
   final _p2DescripcionCtrl = TextEditingController();
 
   // Catálogos
-  List<Map<String, dynamic>> _ramas = [];
   List<Map<String, dynamic>> _etnias = [];
   List<Map<String, dynamic>> _estadosCiviles = [];
   Map<String, List<String>> _sugerencias = const {};
@@ -122,19 +103,18 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    HardwareKeyboard.instance.addHandler(_onHardwareKeyEvent);
     _loadCatalogos();
   }
 
   Future<void> _loadCatalogos() async {
     final repo = ref.read(artesanoRepositoryProvider);
-    final ramas = await repo.getRamasArtesanales();
     final etnias = await repo.getEtnias();
     final estadosCiviles = await repo.getEstadosCiviles();
     final sugerencias = await repo.getSugerenciasFormulario();
 
     if (mounted) {
       setState(() {
-        _ramas = ramas;
         _etnias = etnias;
         _estadosCiviles = estadosCiviles;
         _sugerencias = sugerencias;
@@ -144,13 +124,17 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onHardwareKeyEvent);
     _tabController.dispose();
     _busquedaCurpCtrl.dispose();
+    _busquedaCurpFocusNode.dispose();
+    _artNombreFocusNode.dispose();
+    _p1NombreFocusNode.dispose();
+    _p2NombreFocusNode.dispose();
     _artNombreCtrl.dispose();
     _artApPaternoCtrl.dispose();
     _artApMaternoCtrl.dispose();
     _artCurpCtrl.dispose();
-    _artRfcCtrl.dispose();
     _artFechaNacimientoCtrl.dispose();
     _artTelefonoCtrl.dispose();
     _artMunicipioCtrl.dispose();
@@ -239,7 +223,6 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
     _artApPaternoCtrl.text = a.apPaterno;
     _artApMaternoCtrl.text = a.apMaterno ?? '';
     _artCurpCtrl.text = a.curp;
-    _artRfcCtrl.text = a.rfc ?? '';
     _artFechaNacimientoCtrl.text = a.fechaNacimiento ?? '';
 
     final g = a.genero?.toUpperCase();
@@ -256,23 +239,38 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
     _artTelefonoCtrl.text = a.telefono ?? '';
 
     final rawMun = a.municipio.trim();
-    _artMunicipio = _resolveMunicipio(rawMun);
-    _artMunicipioCtrl.text = _artMunicipio ?? rawMun;
+    if (rawMun.isNotEmpty) {
+      _artMunicipio = _resolveMunicipio(rawMun);
+      _artMunicipioCtrl.text = _artMunicipio ?? rawMun;
+    } else if (_fijarMunicipio && _pinnedMunicipio != null) {
+      _artMunicipio = _pinnedMunicipio;
+      _artMunicipioCtrl.text = _pinnedMunicipio!;
+    } else {
+      _artMunicipio = null;
+      _artMunicipioCtrl.clear();
+    }
 
     final rawLoc = a.localidad.trim();
-    _artLocalidad = rawLoc.isNotEmpty ? rawLoc : null;
-    _artLocalidadCtrl.text = rawLoc;
+    if (rawLoc.isNotEmpty) {
+      _artLocalidad = rawLoc;
+      _artLocalidadCtrl.text = rawLoc;
+    } else if (_fijarLocalidad &&
+        _pinnedLocalidad != null &&
+        _artMunicipio == _pinnedMunicipio) {
+      _artLocalidad = _pinnedLocalidad;
+      _artLocalidadCtrl.text = _pinnedLocalidad!;
+    } else {
+      _artLocalidad = null;
+      _artLocalidadCtrl.clear();
+    }
 
     _artColoniaCtrl.text = a.colonia ?? '';
     _artCalleCtrl.text = a.calle ?? '';
     _artNumExteriorCtrl.text = a.numeroExterior ?? '';
     _artCodigoPostalCtrl.text = a.codigoPostal ?? '';
 
-    _artEtniaId = a.idEtnia;
+    _artEtniaId = a.idEtnia ?? (_fijarEtnia ? _pinnedEtniaId : null);
     _artEstadoCivilId = a.idEstadoCivil;
-
-    final rawNivel = int.tryParse(a.nivelEducativo ?? '0') ?? 0;
-    _artNivelEducativo = (rawNivel >= 0 && rawNivel <= 9) ? rawNivel : 0;
 
     if (_artFechaNacimientoCtrl.text.trim().isEmpty || _artGenero == null) {
       _extraerFechaYGeneroDeCurp(a.curp);
@@ -324,21 +322,132 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
     _artApPaternoCtrl.clear();
     _artApMaternoCtrl.clear();
     _artCurpCtrl.clear();
-    _artRfcCtrl.clear();
     _artFechaNacimientoCtrl.clear();
     _artGenero = null;
     _artTelefonoCtrl.clear();
-    _artMunicipio = null;
-    _artMunicipioCtrl.clear();
-    _artLocalidad = null;
-    _artLocalidadCtrl.clear();
+
+    if (_fijarMunicipio) {
+      _artMunicipio = _pinnedMunicipio ?? _artMunicipio;
+      _artMunicipioCtrl.text = _artMunicipio ?? '';
+    } else {
+      _artMunicipio = null;
+      _artMunicipioCtrl.clear();
+    }
+
+    if (_fijarLocalidad &&
+        _artMunicipio != null &&
+        _artMunicipio!.trim().isNotEmpty) {
+      _artLocalidad = _pinnedLocalidad ?? _artLocalidad;
+      _artLocalidadCtrl.text = _artLocalidad ?? '';
+    } else {
+      _artLocalidad = null;
+      _artLocalidadCtrl.clear();
+    }
+
     _artColoniaCtrl.clear();
     _artCalleCtrl.clear();
     _artNumExteriorCtrl.clear();
     _artCodigoPostalCtrl.clear();
-    _artEtniaId = null;
+
+    if (_fijarEtnia) {
+      _artEtniaId = _pinnedEtniaId ?? _artEtniaId;
+    } else {
+      _artEtniaId = null;
+    }
+
     _artEstadoCivilId = null;
-    _artNivelEducativo = 0;
+  }
+
+  void _togglePinEtnia() {
+    setState(() {
+      _fijarEtnia = !_fijarEtnia;
+      _pinnedEtniaId = _fijarEtnia ? _artEtniaId : null;
+    });
+  }
+
+  void _togglePinMunicipio() {
+    setState(() {
+      _fijarMunicipio = !_fijarMunicipio;
+      if (_fijarMunicipio) {
+        _pinnedMunicipio = _artMunicipio;
+      } else {
+        _pinnedMunicipio = null;
+        _fijarLocalidad = false;
+        _pinnedLocalidad = null;
+      }
+    });
+  }
+
+  void _togglePinLocalidad() {
+    setState(() {
+      _fijarLocalidad = !_fijarLocalidad;
+      if (_fijarLocalidad) {
+        _pinnedLocalidad = _artLocalidad;
+        if (_artMunicipio != null && _artMunicipio!.trim().isNotEmpty) {
+          _fijarMunicipio = true;
+          _pinnedMunicipio = _artMunicipio;
+        }
+      } else {
+        _pinnedLocalidad = null;
+      }
+    });
+  }
+
+  void _desfijarValoresFrecuentes() {
+    setState(() {
+      _fijarEtnia = false;
+      _pinnedEtniaId = null;
+      _fijarMunicipio = false;
+      _pinnedMunicipio = null;
+      _fijarLocalidad = false;
+      _pinnedLocalidad = null;
+    });
+  }
+
+  Widget _buildPinFieldButton({
+    required Key key,
+    required bool isPinned,
+    required String fieldLabel,
+    required VoidCallback onPressed,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Tooltip(
+        message: isPinned
+            ? '$fieldLabel fijado entre registros (clic para desfijar)'
+            : 'Fijar $fieldLabel para conservarlo entre registros',
+        child: Material(
+          color: isPinned
+              ? Colors.amber.shade100
+              : (isDark ? Colors.grey.shade800 : Colors.grey.shade100),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(
+              color: isPinned
+                  ? Colors.amber.shade700
+                  : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
+              width: isPinned ? 1.5 : 1.0,
+            ),
+          ),
+          child: InkWell(
+            key: key,
+            borderRadius: BorderRadius.circular(8),
+            onTap: onPressed,
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Icon(
+                isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                size: 18,
+                color: isPinned
+                    ? Colors.amber.shade900
+                    : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _autocompletarDesdeCurp(String rawCurp, Concurso concurso) {
@@ -593,6 +702,11 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
         _esNuevoArtesano = false;
         _cargarDatosArtesano(encontrado);
       });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _p1NombreFocusNode.requestFocus();
+        }
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -616,6 +730,11 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
       if (esPosibleCurp && curpInicial.isNotEmpty) {
         _autocompletarDesdeCurp(curpInicial, concurso);
       }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _artNombreFocusNode.requestFocus();
+        }
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -683,10 +802,6 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
             concurso.categorias.any((c) => c.id == _p1CategoriaId))
         ? _p1CategoriaId
         : null;
-    final safeP1Rama =
-        (_p1RamaId != null && _ramas.any((r) => r['id'] == _p1RamaId))
-        ? _p1RamaId
-        : null;
 
     if (safeP1Cat == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -698,40 +813,22 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
       return;
     }
 
-    if (safeP1Rama == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Selecciona una rama artesanal válida para la Pieza 1.',
-          ),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
     int? safeP2Cat;
-    int? safeP2Rama;
     if (_incluirPieza2) {
       safeP2Cat =
           (_p2CategoriaId != null &&
               concurso.categorias.any((c) => c.id == _p2CategoriaId))
           ? _p2CategoriaId
           : null;
-      safeP2Rama =
-          (_p2RamaId != null && _ramas.any((r) => r['id'] == _p2RamaId))
-          ? _p2RamaId
-          : null;
       final p2CostoVal = double.tryParse(_p2CostoCtrl.text.trim());
       if (_p2NombreCtrl.text.trim().isEmpty ||
           safeP2Cat == null ||
-          safeP2Rama == null ||
           p2CostoVal == null ||
           p2CostoVal <= 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'Completa nombre, categoría, rama y un costo de producción válido para la Pieza 2.',
+              'Completa nombre, categoría y un costo de producción válido para la Pieza 2.',
             ),
             backgroundColor: Colors.red,
           ),
@@ -766,9 +863,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
             ? _artApMaternoCtrl.text.trim()
             : null,
         curp: _artCurpCtrl.text.trim().toUpperCase(),
-        rfc: _artRfcCtrl.text.trim().isNotEmpty
-            ? _artRfcCtrl.text.trim().toUpperCase()
-            : null,
+        rfc: _selectedArtesano?.rfc,
         fechaNacimiento: _artFechaNacimientoCtrl.text.trim().isNotEmpty
             ? _artFechaNacimientoCtrl.text.trim()
             : null,
@@ -796,7 +891,10 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
             : null,
         idEtnia: safeEtnia,
         idEstadoCivil: safeEstadoCivil,
-        nivelEducativo: _artNivelEducativo.toString(),
+        nivelEducativo: (_selectedArtesano?.nivelEducativo != null &&
+                _selectedArtesano!.nivelEducativo!.trim().isNotEmpty)
+            ? _selectedArtesano!.nivelEducativo!
+            : '1',
       );
 
       // Pieza 1
@@ -805,7 +903,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
 
       final pieza1 = Artesania(
         nombre: _p1NombreCtrl.text.trim(),
-        idRamaArtesanal: safeP1Rama,
+        idRamaArtesanal: 1,
         costoProduccion: p1CostoProd,
         costoVenta: p1CostoVent,
         tiempoElaboracion: double.tryParse(_p1TiempoCtrl.text.trim()) ?? 1.0,
@@ -818,13 +916,13 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
 
       // Pieza 2
       Artesania? pieza2;
-      if (_incluirPieza2 && safeP2Cat != null && safeP2Rama != null) {
+      if (_incluirPieza2 && safeP2Cat != null) {
         final p2CostoProd = double.tryParse(_p2CostoCtrl.text.trim()) ?? 0.0;
         final p2CostoVent = _calcularCostoVenta(p2CostoProd, concurso);
 
         pieza2 = Artesania(
           nombre: _p2NombreCtrl.text.trim(),
-          idRamaArtesanal: safeP2Rama,
+          idRamaArtesanal: 1,
           costoProduccion: p2CostoProd,
           costoVenta: p2CostoVent,
           tiempoElaboracion: double.tryParse(_p2TiempoCtrl.text.trim()) ?? 1.0,
@@ -854,14 +952,21 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
       _limpiarFormulario();
 
       if (mounted) {
-        // Abrir visor de impresión directamente
-        showDialog(
+        // Abrir visor de impresión directamente y al cerrar reenfocar buscador de CURP
+        await showDialog<void>(
           context: context,
           builder: (ctx) => ComprobanteDialog(
             registro: nuevoRegistro,
             concurso: concurso,
           ),
         );
+        if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && !_esNuevoArtesano) {
+              _busquedaCurpFocusNode.requestFocus();
+            }
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -889,7 +994,6 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
       _limpiarCamposArtesano();
 
       _p1NombreCtrl.clear();
-      _p1RamaId = null;
       _p1CategoriaId = null;
       _p1SubcategoriaId = null;
       _p1CostoCtrl.clear();
@@ -900,7 +1004,6 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
 
       _incluirPieza2 = false;
       _p2NombreCtrl.clear();
-      _p2RamaId = null;
       _p2CategoriaId = null;
       _p2SubcategoriaId = null;
       _p2CostoCtrl.clear();
@@ -909,6 +1012,116 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
       _p2MaterialCtrl.clear();
       _p2DescripcionCtrl.clear();
     });
+  }
+
+  void _activarModoBuscarArtesano() {
+    if (_esNuevoArtesano) {
+      setState(() {
+        _esNuevoArtesano = false;
+        _selectedArtesano = null;
+        _limpiarCamposArtesano();
+      });
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _busquedaCurpFocusNode.requestFocus();
+        if (_busquedaCurpCtrl.text.isNotEmpty) {
+          _busquedaCurpCtrl.selection = TextSelection(
+            baseOffset: 0,
+            extentOffset: _busquedaCurpCtrl.text.length,
+          );
+        }
+      }
+    });
+  }
+
+  void _activarModoNuevoArtesano() {
+    if (!_esNuevoArtesano) {
+      setState(() {
+        _esNuevoArtesano = true;
+        _selectedArtesano = null;
+        _limpiarCamposArtesano();
+      });
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _artNombreFocusNode.requestFocus();
+      }
+    });
+  }
+
+  void _alternarSegundaPieza({bool? forzarValor}) {
+    final nuevoValor = forzarValor ?? !_incluirPieza2;
+    setState(() {
+      _incluirPieza2 = nuevoValor;
+    });
+    if (nuevoValor) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _p2NombreFocusNode.requestFocus();
+        }
+      });
+    }
+  }
+
+  bool _onHardwareKeyEvent(KeyEvent event) {
+    if (!mounted) return false;
+    if (ModalRoute.of(context)?.isCurrent == false) return false;
+    final concurso = ref.read(selectedConcursoProvider).value;
+    if (concurso == null) return false;
+    return _handleKeyEvent(event, concurso) == KeyEventResult.handled;
+  }
+
+  KeyEventResult _handleKeyEvent(KeyEvent event, Concurso concurso) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (concurso.finalizado || _tabController.index != 0) {
+      return KeyEventResult.ignored;
+    }
+
+    final keyboard = HardwareKeyboard.instance;
+    final isCtrl = keyboard.isControlPressed || keyboard.isMetaPressed;
+    final isAlt = keyboard.isAltPressed;
+    final key = event.logicalKey;
+
+    // F2: Enfocar buscador de CURP / Artesano
+    if (!isCtrl && !isAlt && key == LogicalKeyboardKey.f2) {
+      _activarModoBuscarArtesano();
+      return KeyEventResult.handled;
+    }
+
+    // Ctrl + Enter o F9: Guardar inscripción e imprimir comprobante
+    if ((isCtrl &&
+            (key == LogicalKeyboardKey.enter ||
+                key == LogicalKeyboardKey.numpadEnter)) ||
+        (!isCtrl && !isAlt && key == LogicalKeyboardKey.f9)) {
+      if (!_isSaving) {
+        _guardarInscripcion(concurso);
+      }
+      return KeyEventResult.handled;
+    }
+
+    // Alt + N: Cambiar a "Nuevo Artesano" y enfocar Nombre(s)
+    if (isAlt && !isCtrl && key == LogicalKeyboardKey.keyN) {
+      _activarModoNuevoArtesano();
+      return KeyEventResult.handled;
+    }
+
+    // Alt + B: Cambiar a "Buscar Registrado" y enfocar buscador CURP
+    if (isAlt && !isCtrl && key == LogicalKeyboardKey.keyB) {
+      _activarModoBuscarArtesano();
+      return KeyEventResult.handled;
+    }
+
+    // Alt + 2: Activar/desactivar Segunda Pieza y enfocar Nombre de Pieza 2
+    if (isAlt &&
+        !isCtrl &&
+        (key == LogicalKeyboardKey.digit2 ||
+            key == LogicalKeyboardKey.numpad2)) {
+      _alternarSegundaPieza();
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
   }
 
   @override
@@ -1137,10 +1350,6 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
         ),
       );
     }
-    final safeP1RamaId =
-        (_p1RamaId != null && _ramas.any((r) => r['id'] == _p1RamaId))
-        ? _p1RamaId
-        : null;
     final safeP1CategoriaId =
         (_p1CategoriaId != null &&
             concurso.categorias.any((c) => c.id == _p1CategoriaId))
@@ -1161,10 +1370,6 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
         ? _p1SubcategoriaId
         : null;
 
-    final safeP2RamaId =
-        (_p2RamaId != null && _ramas.any((r) => r['id'] == _p2RamaId))
-        ? _p2RamaId
-        : null;
     final safeP2CategoriaId =
         (_p2CategoriaId != null &&
             concurso.categorias.any((c) => c.id == _p2CategoriaId))
@@ -1204,124 +1409,196 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
         ? _p2Plazo
         : 'semanas';
 
-    return Form(
-      key: _formKey,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-          // BANNER DEL FOLIO ASIGNADO
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.red.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.red.shade300),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.confirmation_number_outlined,
-                  color: Colors.red,
-                  size: 28,
-                ),
-                const SizedBox(width: 14),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'FOLIO A ASIGNAR EN ESTA INSCRIPCIÓN',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.red,
-                      ),
-                    ),
-                    Text(
-                      '#${nextFolio.toString().padLeft(4, '0')}',
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.red,
-                      ),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                Text(
-                  'IVA: ${concurso.iva}% | Utilidad: ${concurso.utilidad}%',
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // 1. SECCIÓN ARTESANO
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
+    return Focus(
+      child: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+            // BANNER DEL FOLIO ASIGNADO
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.red.shade300),
+              ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Row(
                     children: [
-                      const Text(
-                        '1. Datos del Artesano',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                      const Icon(
+                        Icons.confirmation_number_outlined,
+                        color: Colors.red,
+                        size: 28,
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'FOLIO A ASIGNAR EN ESTA INSCRIPCIÓN',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red,
+                              ),
+                            ),
+                            Text(
+                              '#${nextFolio.toString().padLeft(4, '0')}',
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const Spacer(),
-                      ChoiceChip(
-                        label: const Text('Buscar Registrado'),
-                        selected: !_esNuevoArtesano,
-                        onSelected: (val) {
-                          if (val) {
-                            setState(() {
-                              _esNuevoArtesano = false;
-                              _selectedArtesano = null;
-                              _limpiarCamposArtesano();
-                            });
-                          }
-                        },
-                      ),
-                      const SizedBox(width: 8),
-                      ChoiceChip(
-                        label: const Text('Nuevo Artesano'),
-                        selected: _esNuevoArtesano,
-                        onSelected: (val) {
-                          if (val) {
-                            setState(() {
-                              _esNuevoArtesano = true;
-                              _selectedArtesano = null;
-                              _limpiarCamposArtesano();
-                            });
-                          }
-                        },
+                      const SizedBox(width: 12),
+                      Flexible(
+                        child: Text(
+                          'IVA: ${concurso.iva}% | Utilidad: ${concurso.utilidad}%',
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
                       ),
                     ],
                   ),
-                  const Divider(height: 24),
-
-                  if (!_esNuevoArtesano) ...[
-                    // BUSCADOR RÁPIDO
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _busquedaCurpCtrl,
-                            decoration: const InputDecoration(
-                              hintText: 'Ingresa ID o CURP del artesano...',
-                              prefixIcon: Icon(Icons.search),
-                              isDense: true,
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.keyboard_alt_outlined,
+                            size: 14,
+                            color: Colors.grey.shade700,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Atajos rápidos:',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey.shade800,
                             ),
-                            onSubmitted: (q) => _buscarArtesano(q, concurso),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        'F2 / Alt+B: Buscar CURP',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                      Text(
+                        'Alt+N: Nuevo Artesano',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                      Text(
+                        'Alt+2: 2da Pieza',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                      Text(
+                        'Ctrl+Enter / F9: Guardar e Imprimir',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // 1. SECCIÓN ARTESANO
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        const Text(
+                          '1. Datos del Artesano',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: [
+                            ChoiceChip(
+                              tooltip: 'Atajo: Alt + B o F2',
+                              label: const Text('Buscar Registrado'),
+                              selected: !_esNuevoArtesano,
+                              onSelected: (val) {
+                                if (val) {
+                                  _activarModoBuscarArtesano();
+                                }
+                              },
+                            ),
+                            ChoiceChip(
+                              tooltip: 'Atajo: Alt + N',
+                              label: const Text('Nuevo Artesano'),
+                              selected: _esNuevoArtesano,
+                              onSelected: (val) {
+                                if (val) {
+                                  _activarModoNuevoArtesano();
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 24),
+
+                    if (!_esNuevoArtesano) ...[
+                      // BUSCADOR RÁPIDO
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _busquedaCurpCtrl,
+                              focusNode: _busquedaCurpFocusNode,
+                              autofocus: true,
+                              decoration: const InputDecoration(
+                                hintText: 'Ingresa ID o CURP del artesano...',
+                                suffixText: 'F2',
+                                prefixIcon: Icon(Icons.search),
+                                isDense: true,
+                              ),
+                              onSubmitted: (q) => _buscarArtesano(q, concurso),
+                            ),
+                          ),
                         const SizedBox(width: 12),
                         ElevatedButton.icon(
                           icon: const Icon(Icons.search, size: 18),
@@ -1385,7 +1662,10 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 4,
+                                    crossAxisAlignment: WrapCrossAlignment.center,
                                     children: [
                                       Text(
                                         _selectedArtesano!.nombreCompleto,
@@ -1394,7 +1674,6 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
                                       Container(
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 8,
@@ -1443,6 +1722,11 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                                   _selectedArtesano = null;
                                   _limpiarCamposArtesano();
                                 });
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  if (mounted) {
+                                    _busquedaCurpFocusNode.requestFocus();
+                                  }
+                                });
                               },
                             ),
                           ],
@@ -1481,6 +1765,7 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                         Expanded(
                           child: TextFormField(
                             controller: _artNombreCtrl,
+                            focusNode: _artNombreFocusNode,
                             decoration: const InputDecoration(
                               labelText: 'Nombre(s) *',
                               prefixIcon: Icon(Icons.person_outline),
@@ -1632,35 +1917,44 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                     Row(
                       children: [
                         Expanded(
-                          child: TextFormField(
-                            controller: _artRfcCtrl,
-                            textCapitalization: TextCapitalization.characters,
-                            decoration: const InputDecoration(
-                              labelText: 'RFC (Opcional)',
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: KeySelectableDropdownFormField<int?>(
-                            key: const ValueKey('art_etnia'),
-                            initialValue: safeEtniaId,
-                            decoration: const InputDecoration(
-                              labelText: 'Etnia *',
-                            ),
-                            items: _etnias
-                                .where((e) => e['id'] != null)
-                                .map(
-                                  (e) => DropdownMenuItem<int?>(
-                                    value: e['id'] as int,
-                                    child: Text(e['nombre'] as String),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: KeySelectableDropdownFormField<int?>(
+                                  key: const ValueKey('art_etnia'),
+                                  initialValue: safeEtniaId,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Etnia *',
                                   ),
-                                )
-                                .toList(),
-                            validator: (v) => v == null
-                                ? 'Selecciona una etnia'
-                                : null,
-                            onChanged: (v) => setState(() => _artEtniaId = v),
+                                  items: _etnias
+                                      .where((e) => e['id'] != null)
+                                      .map(
+                                        (e) => DropdownMenuItem<int?>(
+                                          value: e['id'] as int,
+                                          child: Text(e['nombre'] as String),
+                                        ),
+                                      )
+                                      .toList(),
+                                  validator: (v) => v == null
+                                      ? 'Selecciona una etnia'
+                                      : null,
+                                  onChanged: (v) => setState(() {
+                                    _artEtniaId = v;
+                                    if (_fijarEtnia && _pinnedEtniaId == null) {
+                                      _pinnedEtniaId = v;
+                                    }
+                                  }),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              _buildPinFieldButton(
+                                key: const ValueKey('pin_etnia'),
+                                isPinned: _fijarEtnia,
+                                fieldLabel: 'Etnia',
+                                onPressed: _togglePinEtnia,
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -1690,135 +1984,6 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                       ],
                     ),
 
-                    const SizedBox(height: 16),
-
-                    // BARRA DESLIZABLE DE ESCOLARIDAD (NIVEL EDUCATIVO)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? const Color(0xFF1E1E24)
-                            : Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.grey.shade800
-                              : Colors.grey.shade300,
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.school_outlined,
-                                    size: 20,
-                                    color: AppTheme.casart800,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Text(
-                                    'Escolaridad / Nivel Educativo *',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.casart100,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: AppTheme.casart300),
-                                ),
-                                child: Text(
-                                  _nivelesEducativosDetalle[_artNivelEducativo],
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                    color: AppTheme.casart900,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          SliderTheme(
-                            data: SliderTheme.of(context).copyWith(
-                              activeTrackColor: AppTheme.casart800,
-                              inactiveTrackColor:
-                                  Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.grey.shade700
-                                  : Colors.grey.shade300,
-                              thumbColor: AppTheme.casart800,
-                              overlayColor: AppTheme.casart800.withValues(
-                                alpha: 0.2,
-                              ),
-                              trackHeight: 6,
-                              tickMarkShape: const RoundSliderTickMarkShape(
-                                tickMarkRadius: 3,
-                              ),
-                              activeTickMarkColor: Colors.white,
-                              inactiveTickMarkColor: Colors.grey.shade500,
-                            ),
-                            child: Slider(
-                              value: _artNivelEducativo.toDouble(),
-                              min: 0,
-                              max: 9,
-                              divisions: 9,
-                              label:
-                                  _nivelesEducativosDetalle[_artNivelEducativo],
-                              onChanged: (val) {
-                                setState(() {
-                                  _artNivelEducativo = val.round();
-                                });
-                              },
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 6),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: List.generate(
-                                _nivelesEducativos.length,
-                                (index) {
-                                  final isSelected =
-                                      index == _artNivelEducativo;
-                                  return Text(
-                                    _nivelesEducativos[index],
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: isSelected
-                                          ? FontWeight.bold
-                                          : FontWeight.w500,
-                                      color: isSelected
-                                          ? AppTheme.casart800
-                                          : (Theme.of(context).brightness ==
-                                                    Brightness.dark
-                                                ? Colors.grey.shade400
-                                                : Colors.grey.shade600),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
                     const SizedBox(height: 18),
 
                     // SUBSECCIÓN: INFORMACIÓN DEL DOMICILIO
@@ -1832,23 +1997,77 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: Colors.blueGrey.shade200),
                       ),
-                      child: Row(
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Icon(
-                            Icons.home_outlined,
-                            size: 20,
-                            color: AppTheme.casart800,
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.home_outlined,
+                                size: 20,
+                                color: AppTheme.casart800,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'INFORMACIÓN DEL DOMICILIO',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.casart800,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'INFORMACIÓN DEL DOMICILIO',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.casart800,
-                              letterSpacing: 0.5,
+                          if (_fijarEtnia || _fijarMunicipio || _fijarLocalidad)
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.push_pin,
+                                  size: 14,
+                                  color: Colors.amber.shade900,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Fijados: ${[
+                                    if (_fijarEtnia) 'Etnia',
+                                    if (_fijarMunicipio) 'Municipio',
+                                    if (_fijarLocalidad) 'Localidad',
+                                  ].join(', ')}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.amber.shade900,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                InkWell(
+                                  key: const ValueKey('btn_desfijar_todos'),
+                                  onTap: _desfijarValoresFrecuentes,
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    child: Text(
+                                      'Desfijar todos',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        decoration: TextDecoration.underline,
+                                        color: Colors.red.shade700,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
                         ],
                       ),
                     ),
@@ -1857,37 +2076,59 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Selector de Municipio con Búsqueda
+                        // Selector de Municipio con Búsqueda + Pin
                         Expanded(
-                          child: SearchableSelectFormField(
-                            key: ValueKey('art_mun_$_artMunicipio'),
-                            value: _artMunicipio,
-                            items: [
-                              ...MunicipiosData.municipios,
-                              if (_artMunicipio != null &&
-                                  _artMunicipio!.trim().isNotEmpty &&
-                                  !MunicipiosData.municipios.contains(_artMunicipio))
-                                _artMunicipio!,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: SearchableSelectFormField(
+                                  key: const ValueKey('art_mun'),
+                                  value: _artMunicipio,
+                                  items: [
+                                    ...MunicipiosData.municipios,
+                                    if (_artMunicipio != null &&
+                                        _artMunicipio!.trim().isNotEmpty &&
+                                        !MunicipiosData.municipios.contains(
+                                          _artMunicipio,
+                                        ))
+                                      _artMunicipio!,
+                                  ],
+                                  labelText: 'Municipio *',
+                                  prefixIcon: Icons.location_city_outlined,
+                                  searchTitle: 'Buscar Municipio',
+                                  searchHint:
+                                      'Escribe una letra o nombre del municipio...',
+                                  validator: (v) =>
+                                      (v == null || v.trim().isEmpty)
+                                      ? 'Selecciona un municipio'
+                                      : null,
+                                  onChanged: (val) {
+                                    setState(() {
+                                      _artMunicipio = val;
+                                      _artMunicipioCtrl.text = val ?? '';
+                                      if (_fijarMunicipio &&
+                                          _pinnedMunicipio == null) {
+                                        _pinnedMunicipio = val;
+                                      }
+                                      _artLocalidad = null;
+                                      _artLocalidadCtrl.clear();
+                                    });
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              _buildPinFieldButton(
+                                key: const ValueKey('pin_municipio'),
+                                isPinned: _fijarMunicipio,
+                                fieldLabel: 'Municipio',
+                                onPressed: _togglePinMunicipio,
+                              ),
                             ],
-                            labelText: 'Municipio *',
-                            prefixIcon: Icons.location_city_outlined,
-                            searchTitle: 'Buscar Municipio',
-                            searchHint: 'Escribe una letra o nombre del municipio...',
-                            validator: (v) => (v == null || v.trim().isEmpty)
-                                ? 'Selecciona un municipio'
-                                : null,
-                            onChanged: (val) {
-                              setState(() {
-                                _artMunicipio = val;
-                                _artMunicipioCtrl.text = val ?? '';
-                                _artLocalidad = null;
-                                _artLocalidadCtrl.clear();
-                              });
-                            },
                           ),
                         ),
                         const SizedBox(width: 12),
-                        // Selector de Localidad dependiente con Búsqueda
+                        // Selector de Localidad dependiente con Búsqueda + Pin
                         Expanded(
                           child: Builder(
                             builder: (context) {
@@ -1905,36 +2146,63 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                                   _artLocalidad!,
                               ];
 
-                              return SearchableSelectFormField(
-                                key: ValueKey(
-                                  'art_loc_${_artMunicipio}_$_artLocalidad',
-                                ),
-                                value: _artLocalidad,
-                                items: items,
-                                labelText: 'Localidad *',
-                                prefixIcon: Icons.place_outlined,
-                                helperText: hasMun
-                                    ? null
-                                    : 'Primero selecciona un municipio',
-                                enabled: hasMun,
-                                searchTitle: 'Buscar Localidad',
-                                searchSubtitle: _artMunicipio != null
-                                    ? 'Municipio: $_artMunicipio'
-                                    : null,
-                                searchHint: 'Escribe una letra o nombre de la localidad...',
-                                allowCustomValue: true,
-                                customValueLabel: 'localidad',
-                                validator: (v) => (v == null || v.trim().isEmpty)
-                                    ? 'Selecciona una localidad'
-                                    : null,
-                                onChanged: !hasMun
-                                    ? null
-                                    : (val) {
-                                        setState(() {
-                                          _artLocalidad = val;
-                                          _artLocalidadCtrl.text = val ?? '';
-                                        });
-                                      },
+                              return Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: SearchableSelectFormField(
+                                      key: const ValueKey('art_loc'),
+                                      value: _artLocalidad,
+                                      items: items,
+                                      labelText: 'Localidad *',
+                                      prefixIcon: Icons.place_outlined,
+                                      helperText: hasMun
+                                          ? null
+                                          : 'Primero selecciona un municipio',
+                                      enabled: hasMun,
+                                      searchTitle: 'Buscar Localidad',
+                                      searchSubtitle: _artMunicipio != null
+                                          ? 'Municipio: $_artMunicipio'
+                                          : null,
+                                      searchHint:
+                                          'Escribe una letra o nombre de la localidad...',
+                                      allowCustomValue: true,
+                                      customValueLabel: 'localidad',
+                                      validator: (v) =>
+                                          (v == null || v.trim().isEmpty)
+                                          ? 'Selecciona una localidad'
+                                          : null,
+                                      onChanged: !hasMun
+                                          ? null
+                                          : (val) {
+                                              setState(() {
+                                                _artLocalidad = val;
+                                                _artLocalidadCtrl.text =
+                                                    val ?? '';
+                                                if (_fijarLocalidad &&
+                                                    _pinnedLocalidad == null) {
+                                                  _pinnedLocalidad = val;
+                                                  if (_artMunicipio != null &&
+                                                      _artMunicipio!
+                                                          .trim()
+                                                          .isNotEmpty) {
+                                                    _fijarMunicipio = true;
+                                                    _pinnedMunicipio ??=
+                                                        _artMunicipio;
+                                                  }
+                                                }
+                                              });
+                                            },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  _buildPinFieldButton(
+                                    key: const ValueKey('pin_localidad'),
+                                    isPinned: _fijarLocalidad,
+                                    fieldLabel: 'Localidad',
+                                    onPressed: _togglePinLocalidad,
+                                  ),
+                                ],
                               );
                             },
                           ),
@@ -2027,45 +2295,17 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const Divider(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: TextFormField(
-                          controller: _p1NombreCtrl,
-                          decoration: const InputDecoration(
-                            labelText: 'Nombre de la Artesanía *',
-                            hintText:
-                                'Ej: Olla de barro negro bruñido con flores',
-                          ),
-                          validator: (v) => v == null || v.trim().isEmpty
-                              ? 'Requerido'
-                              : null,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        flex: 2,
-                        child: KeySelectableDropdownFormField<int?>(
-                          key: const ValueKey('p1_rama'),
-                          initialValue: safeP1RamaId,
-                          decoration: const InputDecoration(
-                            labelText: 'Rama Artesanal *',
-                          ),
-                          items: _ramas
-                              .where((r) => r['id'] != null)
-                              .map(
-                                (r) => DropdownMenuItem<int?>(
-                                  value: r['id'] as int,
-                                  child: Text(r['nombre'] as String),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (val) => setState(() => _p1RamaId = val),
-                          validator: (v) => v == null ? 'Requerido' : null,
-                        ),
-                      ),
-                    ],
+                  TextFormField(
+                    controller: _p1NombreCtrl,
+                    focusNode: _p1NombreFocusNode,
+                    decoration: const InputDecoration(
+                      labelText: 'Nombre de la Artesanía *',
+                      hintText:
+                          'Ej: Olla de barro negro bruñido con flores',
+                    ),
+                    validator: (v) => v == null || v.trim().isEmpty
+                        ? 'Requerido'
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -2276,18 +2516,22 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                 children: [
                   Row(
                     children: [
-                      const Text(
-                        '3. Segunda Pieza (Opcional)',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                      const Expanded(
+                        child: Text(
+                          '3. Segunda Pieza (Opcional)',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                      const Spacer(),
-                      Switch(
-                        value: _incluirPieza2,
-                        onChanged: (val) =>
-                            setState(() => _incluirPieza2 = val),
+                      Tooltip(
+                        message: 'Atajo: Alt + 2',
+                        child: Switch(
+                          value: _incluirPieza2,
+                          onChanged: (val) =>
+                              _alternarSegundaPieza(forzarValor: val),
+                        ),
                       ),
                       Text(
                         _incluirPieza2 ? 'Registrar 2da Pieza' : 'Solo 1 Pieza',
@@ -2296,47 +2540,17 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                   ),
                   if (_incluirPieza2) ...[
                     const Divider(height: 24),
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: TextFormField(
-                            controller: _p2NombreCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Nombre de la Pieza 2 *',
-                            ),
-                            validator: (v) =>
-                                _incluirPieza2 &&
-                                    (v == null || v.trim().isEmpty)
-                                ? 'Requerido'
-                                : null,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          flex: 2,
-                          child: KeySelectableDropdownFormField<int?>(
-                            key: const ValueKey('p2_rama'),
-                            initialValue: safeP2RamaId,
-                            decoration: const InputDecoration(
-                              labelText: 'Rama Artesanal 2 *',
-                            ),
-                            items: _ramas
-                                .where((r) => r['id'] != null)
-                                .map(
-                                  (r) => DropdownMenuItem<int?>(
-                                    value: r['id'] as int,
-                                    child: Text(r['nombre'] as String),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (val) => setState(() => _p2RamaId = val),
-                            validator: (v) => _incluirPieza2 && v == null
-                                ? 'Requerido'
-                                : null,
-                          ),
-                        ),
-                      ],
+                    TextFormField(
+                      controller: _p2NombreCtrl,
+                      focusNode: _p2NombreFocusNode,
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre de la Pieza 2 *',
+                      ),
+                      validator: (v) =>
+                          _incluirPieza2 &&
+                              (v == null || v.trim().isEmpty)
+                          ? 'Requerido'
+                          : null,
                     ),
                     const SizedBox(height: 16),
                     Row(
@@ -2572,7 +2786,8 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
         ],
       ),
     ),
-  );
+  ),
+);
   }
 
   Widget _buildListadoInscripciones(Concurso concurso) {
@@ -2794,7 +3009,11 @@ class _InscripcionViewState extends ConsumerState<InscripcionView>
                         padding: const EdgeInsets.all(16),
                         child: LayoutBuilder(
                           builder: (cardCtx, cardConstraints) {
-                            final isCardNarrow = cardConstraints.maxWidth < 620;
+                            final textScale = MediaQuery.textScalerOf(
+                              cardCtx,
+                            ).scale(1.0);
+                            final isCardNarrow =
+                                (cardConstraints.maxWidth / textScale) < 650;
 
                             final folioWidget = Container(
                               padding: const EdgeInsets.symmetric(

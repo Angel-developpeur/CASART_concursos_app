@@ -576,24 +576,26 @@ class _BackupViewState extends ConsumerState<BackupView> {
                           ),
                         ),
                         const SizedBox(width: 16),
-                        const Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Base de Datos Local',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Base de Datos Local',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                            Text(
-                              'Autocontenida en este equipo',
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontSize: 13,
+                              Text(
+                                'Autocontenida en este equipo',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 13,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -745,24 +747,26 @@ class _BackupViewState extends ConsumerState<BackupView> {
                           ),
                         ),
                         const SizedBox(width: 16),
-                        const Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Exportar en Excel',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Exportar en Excel',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                            Text(
-                              'Generar excel con datos de  Inscripción, Aportaciones y Premios',
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontSize: 13,
+                              Text(
+                                'Generar excel con datos de  Inscripción, Aportaciones y Premios',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 13,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -800,33 +804,40 @@ class _BackupViewState extends ConsumerState<BackupView> {
                           children: [
                             LayoutBuilder(
                               builder: (context, constraints) {
-                                final isCompact = constraints.maxWidth < 650;
-                                final dropdownWidget = DropdownButtonFormField<int>(
-                                  initialValue: currentConcurso.id,
-                                  decoration: const InputDecoration(
-                                    labelText:
-                                        'Selecciona el Concurso a Exportar',
-                                    prefixIcon: Icon(
-                                      Icons.emoji_events_outlined,
-                                    ),
-                                  ),
-                                  items: concursos.map((c) {
-                                    return DropdownMenuItem<int>(
-                                      value: c.id,
-                                      child: Text(
-                                        '${c.nombre} (${c.ejercicio})',
+                                final textScale = MediaQuery.textScalerOf(
+                                  context,
+                                ).scale(1.0);
+                                final isCompact =
+                                    (constraints.maxWidth / textScale) < 680;
+                                final dropdownWidget =
+                                    DropdownButtonFormField<int>(
+                                      initialValue: currentConcurso.id,
+                                      isExpanded: true,
+                                      decoration: const InputDecoration(
+                                        labelText:
+                                            'Selecciona el Concurso a Exportar',
+                                        prefixIcon: Icon(
+                                          Icons.emoji_events_outlined,
+                                        ),
                                       ),
+                                      items: concursos.map((c) {
+                                        return DropdownMenuItem<int>(
+                                          value: c.id,
+                                          child: Text(
+                                            '${c.nombre} (${c.ejercicio})',
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        );
+                                      }).toList(),
+                                      onChanged: (val) {
+                                        if (val != null) {
+                                          setState(
+                                            () => _selectedConcursoIdForExport =
+                                                val,
+                                          );
+                                        }
+                                      },
                                     );
-                                  }).toList(),
-                                  onChanged: (val) {
-                                    if (val != null) {
-                                      setState(
-                                        () => _selectedConcursoIdForExport =
-                                            val,
-                                      );
-                                    }
-                                  },
-                                );
 
                                 final buttonWidget = ElevatedButton.icon(
                                   icon: _isLoading
@@ -947,24 +958,26 @@ class _BackupViewState extends ConsumerState<BackupView> {
                           ),
                         ),
                         const SizedBox(width: 16),
-                        const Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Exportar en Yeizon',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Exportar en Yeizon',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                            Text(
-                              'Exporta un corte completo',
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontSize: 13,
+                              Text(
+                                'Exporta un corte completo',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 13,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -1000,68 +1013,96 @@ class _BackupViewState extends ConsumerState<BackupView> {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  flex: 3,
-                                  child: DropdownButtonFormField<int>(
-                                    initialValue: currentConcurso.id,
-                                    decoration: const InputDecoration(
-                                      labelText:
-                                          'Selecciona el Concurso para Corte Web',
-                                      prefixIcon: Icon(
-                                        Icons.emoji_events_outlined,
-                                      ),
-                                    ),
-                                    items: concursos.map((c) {
-                                      return DropdownMenuItem<int>(
-                                        value: c.id,
-                                        child: Text(
-                                          '${c.nombre} (${c.ejercicio})',
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                final textScale = MediaQuery.textScalerOf(
+                                  context,
+                                ).scale(1.0);
+                                final isCompact =
+                                    (constraints.maxWidth / textScale) < 680;
+                                final dropdownWidget =
+                                    DropdownButtonFormField<int>(
+                                      initialValue: currentConcurso.id,
+                                      isExpanded: true,
+                                      decoration: const InputDecoration(
+                                        labelText:
+                                            'Selecciona el Concurso para Corte Web',
+                                        prefixIcon: Icon(
+                                          Icons.emoji_events_outlined,
                                         ),
-                                      );
-                                    }).toList(),
-                                    onChanged: (val) {
-                                      if (val != null) {
-                                        setState(
-                                          () => _selectedConcursoIdForExport =
-                                              val,
-                                        );
-                                      }
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  flex: 2,
-                                  child: ElevatedButton.icon(
-                                    icon: _isLoading
-                                        ? const SizedBox(
-                                            width: 18,
-                                            height: 18,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : const Icon(Icons.sync_alt),
-                                    label: const Text('Exportar (.json)'),
-                                    style: ElevatedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 20,
-                                        vertical: 16,
                                       ),
-                                      backgroundColor: AppTheme.azulAccent,
-                                      foregroundColor: Colors.white,
-                                    ),
-                                    onPressed: _isLoading
-                                        ? null
-                                        : () => _exportarCorteJson(
-                                            currentConcurso,
+                                      items: concursos.map((c) {
+                                        return DropdownMenuItem<int>(
+                                          value: c.id,
+                                          child: Text(
+                                            '${c.nombre} (${c.ejercicio})',
+                                            overflow: TextOverflow.ellipsis,
                                           ),
+                                        );
+                                      }).toList(),
+                                      onChanged: (val) {
+                                        if (val != null) {
+                                          setState(
+                                            () => _selectedConcursoIdForExport =
+                                                val,
+                                          );
+                                        }
+                                      },
+                                    );
+
+                                final buttonWidget = ElevatedButton.icon(
+                                  icon: _isLoading
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : const Icon(Icons.sync_alt),
+                                  label: const Text('Exportar (.json)'),
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 16,
+                                    ),
+                                    backgroundColor: AppTheme.azulAccent,
+                                    foregroundColor: Colors.white,
                                   ),
-                                ),
-                              ],
+                                  onPressed: _isLoading
+                                      ? null
+                                      : () => _exportarCorteJson(
+                                          currentConcurso,
+                                        ),
+                                );
+
+                                if (isCompact) {
+                                  return Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      dropdownWidget,
+                                      const SizedBox(height: 12),
+                                      buttonWidget,
+                                    ],
+                                  );
+                                }
+
+                                return Row(
+                                  children: [
+                                    Expanded(
+                                      flex: 3,
+                                      child: dropdownWidget,
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      flex: 2,
+                                      child: buttonWidget,
+                                    ),
+                                  ],
+                                );
+                              },
                             ),
                             const SizedBox(height: 16),
                             Container(
@@ -1169,7 +1210,10 @@ class _BackupViewState extends ConsumerState<BackupView> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 6,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(
@@ -1194,7 +1238,6 @@ class _BackupViewState extends ConsumerState<BackupView> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 10),
                               Text(
                                 'Eventos en memoria: ${AppLogger.recentEntries.length}',
                                 style: const TextStyle(
@@ -1398,24 +1441,26 @@ class _BackupViewState extends ConsumerState<BackupView> {
                           ),
                         ),
                         const SizedBox(width: 16),
-                        const Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Actualizaciones del Software',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Actualizaciones del Software',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                            Text(
-                              'Comprobación automática y descarga de nuevas versiones desde GitHub Releases.',
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontSize: 13,
+                              Text(
+                                'Comprobación automática y descarga de nuevas versiones desde GitHub Releases.',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 13,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ],
                     ),

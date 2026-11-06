@@ -228,6 +228,11 @@ class _KeySelectableDropdownFormFieldState<T> extends FormFieldState<T> {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
+    if (HardwareKeyboard.instance.isControlPressed ||
+        HardwareKeyboard.instance.isAltPressed ||
+        HardwareKeyboard.instance.isMetaPressed) {
+      return KeyEventResult.ignored;
+    }
 
     final items = _dropdownWidget.items;
     if (items.isEmpty) return KeyEventResult.ignored;
@@ -355,8 +360,8 @@ class _KeySelectableDropdownFormFieldState<T> extends FormFieldState<T> {
           isEmpty: isEmpty,
           isFocused: _focusNode.hasFocus || _isMenuOpen,
           decoration: effectiveDecoration,
-          child: SizedBox(
-            height: 20,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 20),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:casart_concursos_desktop/core/data/municipios_data.dart';
 import 'package:casart_concursos_desktop/views/common/searchable_select_form_field.dart';
+import 'package:casart_concursos_desktop/views/common/autocomplete_text_form_field.dart';
 
 void main() {
   group('SearchableSelectFormField Tests', () {
@@ -218,6 +219,52 @@ void main() {
       expect(formKey.currentState!.validate(), isFalse);
       await tester.pumpAndSettle();
       expect(find.text('Municipio obligatorio'), findsOneWidget);
+    });
+
+    testWidgets('AutocompleteTextFormField conserva el foco al seleccionar sugerencia y permite avanzar con Tab', (tester) async {
+      final ctrl1 = TextEditingController();
+      final ctrl2 = TextEditingController();
+      final focus2 = FocusNode();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                AutocompleteTextFormField(
+                  controller: ctrl1,
+                  suggestions: const ['Hernández', 'Herrera', 'Hurtado'],
+                  decoration: const InputDecoration(labelText: 'Primer Apellido'),
+                ),
+                TextFormField(
+                  controller: ctrl2,
+                  focusNode: focus2,
+                  decoration: const InputDecoration(labelText: 'Segundo Apellido'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      // Escribir 'Her' en el primer campo
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Primer Apellido'),
+        'Her',
+      );
+      await tester.pumpAndSettle();
+
+      // Seleccionar la sugerencia 'Hernández' con clic
+      await tester.tap(find.textContaining('Hernández', findRichText: true));
+      await tester.pumpAndSettle();
+
+      expect(ctrl1.text, equals('Hernández'));
+
+      // Presionar Tab y verificar que el foco pasa al segundo campo sin requerir clic del mouse
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+
+      expect(focus2.hasFocus, isTrue);
     });
   });
 }

@@ -72,7 +72,8 @@ class ConcursosListView extends ConsumerWidget {
                 padding: const EdgeInsets.all(12),
                 child: LayoutBuilder(
                   builder: (context, filterConstraints) {
-                    final isCompact = filterConstraints.maxWidth < 650;
+                    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+                    final isCompact = (filterConstraints.maxWidth / textScale) < 680;
                     if (isCompact) {
                       return Column(
                         children: [
@@ -270,27 +271,35 @@ class ConcursosListView extends ConsumerWidget {
                                     children: [
                                       Row(
                                         children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.15),
-                                              borderRadius: BorderRadius.circular(4),
-                                            ),
-                                            child: Text(
-                                              c.tipoConcursoNombre?.toUpperCase() ?? 'CONCURSO',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                                color: Theme.of(context).colorScheme.secondary,
-                                              ),
+                                          Expanded(
+                                            child: Wrap(
+                                              spacing: 8,
+                                              runSpacing: 4,
+                                              crossAxisAlignment: WrapCrossAlignment.center,
+                                              children: [
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.15),
+                                                    borderRadius: BorderRadius.circular(4),
+                                                  ),
+                                                  child: Text(
+                                                    c.tipoConcursoNombre?.toUpperCase() ?? 'CONCURSO',
+                                                    style: TextStyle(
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: Theme.of(context).colorScheme.secondary,
+                                                    ),
+                                                  ),
+                                                ),
+                                                Text(
+                                                  'Ejercicio ${c.ejercicio}',
+                                                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                           const SizedBox(width: 8),
-                                          Text(
-                                            'Ejercicio ${c.ejercicio}',
-                                            style: const TextStyle(fontSize: 12, color: Colors.grey),
-                                          ),
-                                          const Spacer(),
                                           if (c.finalizado)
                                             ActionChip(
                                               avatar: const Icon(Icons.check_circle, size: 15, color: Colors.white),
@@ -327,7 +336,9 @@ class ConcursosListView extends ConsumerWidget {
                                             children: [
                                               const Icon(Icons.location_on_outlined, size: 16, color: Colors.grey),
                                               const SizedBox(width: 4),
-                                              Text(c.lugar ?? 'Sede no especificada', style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                                              Flexible(
+                                                child: Text(c.lugar ?? 'Sede no especificada', style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                                              ),
                                             ],
                                           ),
                                           Row(
@@ -335,7 +346,9 @@ class ConcursosListView extends ConsumerWidget {
                                             children: [
                                               const Icon(Icons.calendar_today_outlined, size: 15, color: Colors.grey),
                                               const SizedBox(width: 4),
-                                              Text('Registro: ${Formatters.formatDate(c.fechaInicioRegistro)} al ${Formatters.formatDate(c.fechaLimiteRegistro)}', style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                                              Flexible(
+                                                child: Text('Registro: ${Formatters.formatDate(c.fechaInicioRegistro)} al ${Formatters.formatDate(c.fechaLimiteRegistro)}', style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                                              ),
                                             ],
                                           ),
                                         ],
@@ -344,6 +357,7 @@ class ConcursosListView extends ConsumerWidget {
                                       // Resumen rápido de categorías y aportaciones
                                       Wrap(
                                         spacing: 12,
+                                        runSpacing: 4,
                                         children: [
                                           Text('${c.categorias.length} Categorías', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
                                           Text('Bolsa: ${Formatters.formatCurrency(c.totalAportaciones)} (${c.aportaciones.length} aportaciones)', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.verdeSuccess)),
@@ -356,48 +370,50 @@ class ConcursosListView extends ConsumerWidget {
                                 const SizedBox(width: 16),
 
                                 // Acciones
-                                Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    SizedBox(
-                                      width: 175,
-                                      child: ElevatedButton.icon(
-                                        icon: Icon(c.finalizado ? Icons.visibility_outlined : Icons.app_registration, size: 18),
-                                        label: Text(c.finalizado ? 'Ver Inscripciones' : 'Inscribir Pieza'),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: c.finalizado
-                                              ? (Theme.of(context).brightness == Brightness.dark
-                                                  ? const Color(0xFF334155)
-                                                  : Colors.blueGrey.shade700)
-                                              : AppTheme.verdeSuccess,
-                                          foregroundColor: Colors.white,
+                                IntrinsicWidth(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      ConstrainedBox(
+                                        constraints: const BoxConstraints(minWidth: 175),
+                                        child: ElevatedButton.icon(
+                                          icon: Icon(c.finalizado ? Icons.visibility_outlined : Icons.app_registration, size: 18),
+                                          label: Text(c.finalizado ? 'Ver Inscripciones' : 'Inscribir Pieza'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: c.finalizado
+                                                ? (Theme.of(context).brightness == Brightness.dark
+                                                    ? const Color(0xFF334155)
+                                                    : Colors.blueGrey.shade700)
+                                                : AppTheme.verdeSuccess,
+                                            foregroundColor: Colors.white,
+                                          ),
+                                          onPressed: () {
+                                            ref.read(selectedConcursoIdProvider.notifier).state = c.id;
+                                            onSelectConcurso(c.id!);
+                                          },
                                         ),
-                                        onPressed: () {
-                                          ref.read(selectedConcursoIdProvider.notifier).state = c.id;
-                                          onSelectConcurso(c.id!);
-                                        },
                                       ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    SizedBox(
-                                      width: 175,
-                                      child: OutlinedButton.icon(
-                                        icon: const Icon(Icons.analytics_outlined, size: 17),
-                                        label: const Text('Estadísticas'),
-                                        style: OutlinedButton.styleFrom(
-                                          foregroundColor: AppTheme.casart800,
-                                          side: const BorderSide(color: AppTheme.casart800),
+                                      const SizedBox(height: 8),
+                                      ConstrainedBox(
+                                        constraints: const BoxConstraints(minWidth: 175),
+                                        child: OutlinedButton.icon(
+                                          icon: const Icon(Icons.analytics_outlined, size: 17),
+                                          label: const Text('Estadísticas'),
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: AppTheme.casart800,
+                                            side: const BorderSide(color: AppTheme.casart800),
+                                          ),
+                                          onPressed: () {
+                                            ref.read(selectedConcursoIdProvider.notifier).state = c.id;
+                                            Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                builder: (_) => EstadisticasConcursoView(concurso: c),
+                                              ),
+                                            );
+                                          },
                                         ),
-                                        onPressed: () {
-                                          ref.read(selectedConcursoIdProvider.notifier).state = c.id;
-                                          Navigator.of(context).push(
-                                            MaterialPageRoute(
-                                              builder: (_) => EstadisticasConcursoView(concurso: c),
-                                            ),
-                                          );
-                                        },
                                       ),
-                                    ),
                                     const SizedBox(height: 6),
                                     Row(
                                       mainAxisAlignment: MainAxisAlignment.center,
@@ -427,8 +443,9 @@ class ConcursosListView extends ConsumerWidget {
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
+                          ),
                           ),
                         ),
                       );

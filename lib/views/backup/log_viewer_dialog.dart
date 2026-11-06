@@ -197,70 +197,87 @@ class _LogViewerDialogState extends State<LogViewerDialog> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               color: Colors.grey.shade50,
-              child: Row(
-                children: [
-                  // Campo de búsqueda
-                  Expanded(
-                    child: TextField(
-                      controller: _searchCtrl,
-                      decoration: InputDecoration(
-                        isDense: true,
-                        hintText: 'Buscar por texto, folio, artesano, CURP o error...',
-                        prefixIcon: const Icon(Icons.search, size: 20),
-                        suffixIcon: _searchCtrl.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear, size: 18),
-                                onPressed: () {
-                                  _searchCtrl.clear();
-                                  _applyFilter();
-                                },
-                              )
-                            : null,
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+                  final isCompact = (constraints.maxWidth / textScale) < 760;
+
+                  final searchField = TextField(
+                    controller: _searchCtrl,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      hintText: 'Buscar por texto, folio, artesano, CURP o error...',
+                      prefixIcon: const Icon(Icons.search, size: 20),
+                      suffixIcon: _searchCtrl.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 18),
+                              onPressed: () {
+                                _searchCtrl.clear();
+                                _applyFilter();
+                              },
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
+                  );
 
-                  // Botón Abrir con Notepad
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.description_outlined, size: 18),
-                    label: const Text('Abrir en Notepad'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    ),
-                    onPressed: () => AppLogger.openLogFile(),
-                  ),
-                  const SizedBox(width: 8),
+                  final actionButtons = Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.description_outlined, size: 18),
+                        label: const Text('Abrir en Notepad'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        ),
+                        onPressed: () => AppLogger.openLogFile(),
+                      ),
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.folder_open, size: 18),
+                        label: const Text('Abrir Carpeta'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        ),
+                        onPressed: () => AppLogger.openLogFolder(),
+                      ),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.download, size: 18),
+                        label: const Text('Exportar a USB'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.casart800,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        ),
+                        onPressed: _exportLogs,
+                      ),
+                    ],
+                  );
 
-                  // Botón Abrir Carpeta
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.folder_open, size: 18),
-                    label: const Text('Abrir Carpeta'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    ),
-                    onPressed: () => AppLogger.openLogFolder(),
-                  ),
-                  const SizedBox(width: 8),
+                  if (isCompact) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        searchField,
+                        const SizedBox(height: 10),
+                        actionButtons,
+                      ],
+                    );
+                  }
 
-                  // Botón Exportar
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.download, size: 18),
-                    label: const Text('Exportar a USB'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.casart800,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    ),
-                    onPressed: _exportLogs,
-                  ),
-                ],
+                  return Row(
+                    children: [
+                      Expanded(child: searchField),
+                      const SizedBox(width: 12),
+                      actionButtons,
+                    ],
+                  );
+                },
               ),
             ),
 

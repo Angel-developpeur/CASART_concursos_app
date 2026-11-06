@@ -1,12 +1,14 @@
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'core/database/app_database.dart';
 import 'core/logging/app_logger.dart';
 import 'core/theme/app_theme.dart';
+import 'providers/ui_zoom_provider.dart';
 import 'views/shell/app_shell.dart';
 
 void main() async {
@@ -50,11 +52,14 @@ void main() async {
   runApp(const ProviderScope(child: CasartConcursosApp()));
 }
 
-class CasartConcursosApp extends StatelessWidget {
+class CasartConcursosApp extends ConsumerWidget {
   const CasartConcursosApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final zoomScale = ref.watch(uiZoomProvider);
+    final zoomNotifier = ref.read(uiZoomProvider.notifier);
+
     return MaterialApp(
       title: 'CASART - Concursos (Offline)',
       debugShowCheckedModeBanner: false,
@@ -72,6 +77,40 @@ class CasartConcursosApp extends StatelessWidget {
         Locale('en', ''),
       ],
       locale: const Locale('es', 'MX'),
+      builder: (context, child) {
+        final mediaQuery = MediaQuery.of(context);
+        return CallbackShortcuts(
+          bindings: {
+            const SingleActivator(LogicalKeyboardKey.equal, control: true):
+                zoomNotifier.zoomIn,
+            const SingleActivator(
+              LogicalKeyboardKey.equal,
+              control: true,
+              shift: true,
+            ): zoomNotifier.zoomIn,
+            const SingleActivator(LogicalKeyboardKey.add, control: true):
+                zoomNotifier.zoomIn,
+            const SingleActivator(LogicalKeyboardKey.numpadAdd, control: true):
+                zoomNotifier.zoomIn,
+            const SingleActivator(LogicalKeyboardKey.minus, control: true):
+                zoomNotifier.zoomOut,
+            const SingleActivator(
+              LogicalKeyboardKey.numpadSubtract,
+              control: true,
+            ): zoomNotifier.zoomOut,
+            const SingleActivator(LogicalKeyboardKey.digit0, control: true):
+                zoomNotifier.resetZoom,
+            const SingleActivator(LogicalKeyboardKey.numpad0, control: true):
+                zoomNotifier.resetZoom,
+          },
+          child: MediaQuery(
+            data: mediaQuery.copyWith(
+              textScaler: TextScaler.linear(zoomScale),
+            ),
+            child: child ?? const SizedBox.shrink(),
+          ),
+        );
+      },
       home: const AppShell(),
     );
   }

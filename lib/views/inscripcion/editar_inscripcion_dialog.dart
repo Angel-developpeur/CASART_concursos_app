@@ -45,7 +45,6 @@ class _EditarInscripcionDialogState
   late TextEditingController _artApPaternoCtrl;
   late TextEditingController _artApMaternoCtrl;
   late TextEditingController _artCurpCtrl;
-  late TextEditingController _artRfcCtrl;
   late TextEditingController _artFechaNacimientoCtrl;
   String? _artGenero;
   late TextEditingController _artTelefonoCtrl;
@@ -59,37 +58,9 @@ class _EditarInscripcionDialogState
   late TextEditingController _artCodigoPostalCtrl;
   int? _artEtniaId;
   int? _artEstadoCivilId;
-  int _artNivelEducativo = 0;
-
-  static const List<String> _nivelesEducativos = [
-    'Ninguno',
-    'Primaria inc.',
-    'Primaria comp.',
-    'Secundaria inc.',
-    'Secundaria comp.',
-    'Prepa inc.',
-    'Prepa comp.',
-    'Universidad inc.',
-    'Universidad comp.',
-    'Posgrado',
-  ];
-
-  static const List<String> _nivelesEducativosDetalle = [
-    'Ninguno (Sin escolaridad)',
-    'Primaria incompleta',
-    'Primaria completa',
-    'Secundaria incompleta',
-    'Secundaria completa',
-    'Preparatoria incompleta',
-    'Preparatoria completa',
-    'Universidad incompleta',
-    'Universidad completa',
-    'Posgrado',
-  ];
 
   // Pieza 1
   late TextEditingController _p1NombreCtrl;
-  int? _p1RamaId;
   int? _p1CategoriaId;
   int? _p1SubcategoriaId;
   late TextEditingController _p1CostoCtrl;
@@ -101,7 +72,6 @@ class _EditarInscripcionDialogState
   // Pieza 2
   late bool _incluirPieza2;
   late TextEditingController _p2NombreCtrl;
-  int? _p2RamaId;
   int? _p2CategoriaId;
   int? _p2SubcategoriaId;
   late TextEditingController _p2CostoCtrl;
@@ -111,7 +81,6 @@ class _EditarInscripcionDialogState
   late TextEditingController _p2DescripcionCtrl;
 
   // Catálogos
-  List<Map<String, dynamic>> _ramas = [];
   List<Map<String, dynamic>> _etnias = [];
   List<Map<String, dynamic>> _estadosCiviles = [];
   Map<String, List<String>> _sugerencias = const {};
@@ -129,7 +98,6 @@ class _EditarInscripcionDialogState
     _artApPaternoCtrl = TextEditingController(text: a?.apPaterno ?? '');
     _artApMaternoCtrl = TextEditingController(text: a?.apMaterno ?? '');
     _artCurpCtrl = TextEditingController(text: a?.curp ?? '');
-    _artRfcCtrl = TextEditingController(text: a?.rfc ?? '');
     _artFechaNacimientoCtrl = TextEditingController(
       text: a?.fechaNacimiento ?? '',
     );
@@ -160,12 +128,9 @@ class _EditarInscripcionDialogState
     _artCodigoPostalCtrl = TextEditingController(text: a?.codigoPostal ?? '');
     _artEtniaId = a?.idEtnia;
     _artEstadoCivilId = a?.idEstadoCivil;
-    final rawNivel = int.tryParse(a?.nivelEducativo ?? '0') ?? 0;
-    _artNivelEducativo = (rawNivel >= 0 && rawNivel <= 9) ? rawNivel : 0;
 
     final p1 = widget.registro.artesania1;
     _p1NombreCtrl = TextEditingController(text: p1?.nombre ?? '');
-    _p1RamaId = p1?.idRamaArtesanal;
     _p1CategoriaId = p1?.idCategoriaConcurso;
     _p1SubcategoriaId = p1?.idSubCategoriaConcurso;
     _p1CostoCtrl = TextEditingController(
@@ -183,7 +148,6 @@ class _EditarInscripcionDialogState
     final p2 = widget.registro.artesania2;
     _incluirPieza2 = p2 != null && p2.nombre.trim().isNotEmpty;
     _p2NombreCtrl = TextEditingController(text: p2?.nombre ?? '');
-    _p2RamaId = p2?.idRamaArtesanal;
     _p2CategoriaId = p2?.idCategoriaConcurso;
     _p2SubcategoriaId = p2?.idSubCategoriaConcurso;
     _p2CostoCtrl = TextEditingController(
@@ -204,14 +168,12 @@ class _EditarInscripcionDialogState
   Future<void> _loadCatalogos() async {
     try {
       final repo = ref.read(artesanoRepositoryProvider);
-      final ramas = await repo.getRamasArtesanales();
       final etnias = await repo.getEtnias();
       final estadosCiviles = await repo.getEstadosCiviles();
       final sugerencias = await repo.getSugerenciasFormulario();
 
       if (mounted) {
         setState(() {
-          _ramas = ramas;
           _etnias = etnias;
           _estadosCiviles = estadosCiviles;
           _sugerencias = sugerencias;
@@ -230,7 +192,6 @@ class _EditarInscripcionDialogState
     _artApPaternoCtrl.dispose();
     _artApMaternoCtrl.dispose();
     _artCurpCtrl.dispose();
-    _artRfcCtrl.dispose();
     _artFechaNacimientoCtrl.dispose();
     _artTelefonoCtrl.dispose();
     _artMunicipioCtrl.dispose();
@@ -341,10 +302,6 @@ class _EditarInscripcionDialogState
             widget.concurso.categorias.any((c) => c.id == _p1CategoriaId))
         ? _p1CategoriaId
         : null;
-    final safeP1Rama =
-        (_p1RamaId != null && _ramas.any((r) => r['id'] == _p1RamaId))
-        ? _p1RamaId
-        : null;
 
     if (safeP1Cat == null) {
       _tabController.animateTo(1);
@@ -357,40 +314,23 @@ class _EditarInscripcionDialogState
       return;
     }
 
-    if (safeP1Rama == null) {
-      _tabController.animateTo(1);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Selecciona una rama válida para la Pieza 1.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
     int? safeP2Cat;
-    int? safeP2Rama;
     if (_incluirPieza2) {
       safeP2Cat =
           (_p2CategoriaId != null &&
               widget.concurso.categorias.any((c) => c.id == _p2CategoriaId))
           ? _p2CategoriaId
           : null;
-      safeP2Rama =
-          (_p2RamaId != null && _ramas.any((r) => r['id'] == _p2RamaId))
-          ? _p2RamaId
-          : null;
       final p2CostoVal = double.tryParse(_p2CostoCtrl.text.trim());
       if (_p2NombreCtrl.text.trim().isEmpty ||
           safeP2Cat == null ||
-          safeP2Rama == null ||
           p2CostoVal == null ||
           p2CostoVal <= 0) {
         _tabController.animateTo(2);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'Completa nombre, categoría, rama y un costo de producción válido para la Pieza 2.',
+              'Completa nombre, categoría y un costo de producción válido para la Pieza 2.',
             ),
             backgroundColor: Colors.red,
           ),
@@ -412,9 +352,7 @@ class _EditarInscripcionDialogState
             ? _artApMaternoCtrl.text.trim()
             : null,
         curp: _artCurpCtrl.text.trim().toUpperCase(),
-        rfc: _artRfcCtrl.text.trim().isNotEmpty
-            ? _artRfcCtrl.text.trim().toUpperCase()
-            : null,
+        rfc: widget.registro.artesano?.rfc,
         fechaNacimiento: _artFechaNacimientoCtrl.text.trim().isNotEmpty
             ? _artFechaNacimientoCtrl.text.trim()
             : null,
@@ -438,7 +376,10 @@ class _EditarInscripcionDialogState
             : null,
         idEtnia: _artEtniaId,
         idEstadoCivil: _artEstadoCivilId,
-        nivelEducativo: _artNivelEducativo.toString(),
+        nivelEducativo: (widget.registro.artesano?.nivelEducativo != null &&
+                widget.registro.artesano!.nivelEducativo!.trim().isNotEmpty)
+            ? widget.registro.artesano!.nivelEducativo!
+            : '1',
       );
 
       final p1Costo = double.tryParse(_p1CostoCtrl.text.trim()) ?? 0.0;
@@ -452,7 +393,7 @@ class _EditarInscripcionDialogState
         plazoElaboracion: _p1Plazo,
         materialElaboracion: _p1MaterialCtrl.text.trim(),
         descripcion: _p1DescripcionCtrl.text.trim(),
-        idRamaArtesanal: safeP1Rama,
+        idRamaArtesanal: widget.registro.artesania1?.idRamaArtesanal ?? 1,
         idImagen: widget.registro.artesania1?.idImagen,
         idPremio: widget.registro.artesania1?.idPremio,
         idCategoriaConcurso: safeP1Cat,
@@ -461,7 +402,7 @@ class _EditarInscripcionDialogState
       );
 
       Artesania? pieza2;
-      if (_incluirPieza2 && safeP2Cat != null && safeP2Rama != null) {
+      if (_incluirPieza2 && safeP2Cat != null) {
         final p2Costo = double.tryParse(_p2CostoCtrl.text.trim()) ?? 0.0;
         pieza2 = Artesania(
           id: widget.registro.idArtesania2,
@@ -473,7 +414,7 @@ class _EditarInscripcionDialogState
           plazoElaboracion: _p2Plazo,
           materialElaboracion: _p2MaterialCtrl.text.trim(),
           descripcion: _p2DescripcionCtrl.text.trim(),
-          idRamaArtesanal: safeP2Rama,
+          idRamaArtesanal: widget.registro.artesania2?.idRamaArtesanal ?? 1,
           idImagen: widget.registro.artesania2?.idImagen,
           idPremio: widget.registro.artesania2?.idPremio,
           idCategoriaConcurso: safeP2Cat,
@@ -598,17 +539,19 @@ class _EditarInscripcionDialogState
                             ),
                           ],
                           const SizedBox(width: 14),
-                          Text(
-                            _isReadOnly
-                                ? 'Cédula de Inscripción'
-                                : 'Editar / Corregir Cédula de Inscripción',
-                            style: const TextStyle(
-                              color: Colors.black87,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                          Expanded(
+                            child: Text(
+                              _isReadOnly
+                                  ? 'Cédula de Inscripción'
+                                  : 'Editar / Corregir Cédula de Inscripción',
+                              style: const TextStyle(
+                                color: Colors.black87,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const Spacer(),
                           IconButton(
                             icon: const Icon(
                               Icons.close,
@@ -700,14 +643,17 @@ class _EditarInscripcionDialogState
                       ),
                       child: Row(
                         children: [
-                          Text(
-                            'Concurso: ${widget.concurso.nombre}${_isReadOnly ? ' (Finalizado)' : ''}',
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 12,
+                          Expanded(
+                            child: Text(
+                              'Concurso: ${widget.concurso.nombre}${_isReadOnly ? ' (Finalizado)' : ''}',
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 12,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const Spacer(),
+                          const SizedBox(width: 12),
                           if (_isReadOnly)
                             ElevatedButton.icon(
                               icon: const Icon(Icons.close, size: 18),
@@ -946,17 +892,6 @@ class _EditarInscripcionDialogState
               Row(
                 children: [
                   Expanded(
-                    child: TextFormField(
-                      controller: _artRfcCtrl,
-                      readOnly: _isReadOnly,
-                      textCapitalization: TextCapitalization.characters,
-                      decoration: const InputDecoration(
-                        labelText: 'RFC (Opcional)',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
                     child: KeySelectableDropdownFormField<int?>(
                       key: const ValueKey('edit_art_etnia'),
                       initialValue: safeEtniaId,
@@ -1004,131 +939,6 @@ class _EditarInscripcionDialogState
                 ],
               ),
 
-              const SizedBox(height: 16),
-
-              // BARRA DESLIZABLE DE ESCOLARIDAD (NIVEL EDUCATIVO)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? const Color(0xFF1E1E24)
-                      : Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.grey.shade800
-                        : Colors.grey.shade300,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.school_outlined,
-                              size: 20,
-                              color: AppTheme.casart800,
-                            ),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'Escolaridad / Nivel Educativo *',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppTheme.casart100,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppTheme.casart300),
-                          ),
-                          child: Text(
-                            _nivelesEducativosDetalle[_artNivelEducativo],
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                              color: AppTheme.casart900,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        activeTrackColor: AppTheme.casart800,
-                        inactiveTrackColor:
-                            Theme.of(context).brightness == Brightness.dark
-                            ? Colors.grey.shade700
-                            : Colors.grey.shade300,
-                        thumbColor: AppTheme.casart800,
-                        overlayColor: AppTheme.casart800.withValues(alpha: 0.2),
-                        trackHeight: 6,
-                        tickMarkShape: const RoundSliderTickMarkShape(
-                          tickMarkRadius: 3,
-                        ),
-                        activeTickMarkColor: Colors.white,
-                        inactiveTickMarkColor: Colors.grey.shade500,
-                      ),
-                      child: Slider(
-                        value: _artNivelEducativo.toDouble(),
-                        min: 0,
-                        max: 9,
-                        divisions: 9,
-                        label: _nivelesEducativosDetalle[_artNivelEducativo],
-                        onChanged: _isReadOnly
-                            ? null
-                            : (val) {
-                                setState(() {
-                                  _artNivelEducativo = val.round();
-                                });
-                              },
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: List.generate(_nivelesEducativos.length, (
-                          index,
-                        ) {
-                          final isSelected = index == _artNivelEducativo;
-                          return Text(
-                            _nivelesEducativos[index],
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: isSelected
-                                  ? FontWeight.bold
-                                  : FontWeight.w500,
-                              color: isSelected
-                                  ? AppTheme.casart800
-                                  : (Theme.of(context).brightness ==
-                                            Brightness.dark
-                                        ? Colors.grey.shade400
-                                        : Colors.grey.shade600),
-                            ),
-                          );
-                        }),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
               const SizedBox(height: 20),
 
               // SUBSECCIÓN: INFORMACIÓN DEL DOMICILIO
@@ -1170,7 +980,7 @@ class _EditarInscripcionDialogState
                   // Selector de Municipio con Búsqueda
                   Expanded(
                     child: SearchableSelectFormField(
-                      key: ValueKey('edit_art_mun_$_artMunicipio'),
+                      key: const ValueKey('edit_art_mun'),
                       value: _artMunicipio,
                       items: [
                         ...MunicipiosData.municipios,
@@ -1218,9 +1028,7 @@ class _EditarInscripcionDialogState
                         ];
 
                         return SearchableSelectFormField(
-                          key: ValueKey(
-                            'edit_art_loc_${_artMunicipio}_$_artLocalidad',
-                          ),
+                          key: const ValueKey('edit_art_loc'),
                           value: _artLocalidad,
                           items: items,
                           labelText: 'Localidad *',
@@ -1331,10 +1139,6 @@ class _EditarInscripcionDialogState
     final p1Costo = double.tryParse(_p1CostoCtrl.text.trim()) ?? 0.0;
     final p1Venta = _calcularCostoVenta(p1Costo);
 
-    final safeP1RamaId =
-        (_p1RamaId != null && _ramas.any((r) => r['id'] == _p1RamaId))
-        ? _p1RamaId
-        : null;
     final safeP1CategoriaId =
         (_p1CategoriaId != null &&
             widget.concurso.categorias.any((c) => c.id == _p1CategoriaId))
@@ -1367,45 +1171,14 @@ class _EditarInscripcionDialogState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: TextFormField(
-                      controller: _p1NombreCtrl,
-                      readOnly: _isReadOnly,
-                      decoration: const InputDecoration(
-                        labelText: 'Nombre de la Artesanía *',
-                      ),
-                      validator: (v) =>
-                          v == null || v.trim().isEmpty ? 'Requerido' : null,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 2,
-                    child: KeySelectableDropdownFormField<int?>(
-                      key: const ValueKey('edit_p1_rama'),
-                      initialValue: safeP1RamaId,
-                      decoration: const InputDecoration(
-                        labelText: 'Rama Artesanal *',
-                      ),
-                      items: _ramas
-                          .where((r) => r['id'] != null)
-                          .map(
-                            (r) => DropdownMenuItem<int?>(
-                              value: r['id'] as int,
-                              child: Text(r['nombre'] as String),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: _isReadOnly
-                          ? null
-                          : (val) => setState(() => _p1RamaId = val),
-                      validator: (v) => v == null ? 'Requerido' : null,
-                    ),
-                  ),
-                ],
+              TextFormField(
+                controller: _p1NombreCtrl,
+                readOnly: _isReadOnly,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre de la Artesanía *',
+                ),
+                validator: (v) =>
+                    v == null || v.trim().isEmpty ? 'Requerido' : null,
               ),
               const SizedBox(height: 16),
               Row(
@@ -1590,10 +1363,6 @@ class _EditarInscripcionDialogState
     final p2Costo = double.tryParse(_p2CostoCtrl.text.trim()) ?? 0.0;
     final p2Venta = _calcularCostoVenta(p2Costo);
 
-    final safeP2RamaId =
-        (_p2RamaId != null && _ramas.any((r) => r['id'] == _p2RamaId))
-        ? _p2RamaId
-        : null;
     final safeP2CategoriaId =
         (_p2CategoriaId != null &&
             widget.concurso.categorias.any((c) => c.id == _p2CategoriaId))
@@ -1652,48 +1421,16 @@ class _EditarInscripcionDialogState
                   ),
                 )
               else ...[
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: TextFormField(
-                        controller: _p2NombreCtrl,
-                        readOnly: _isReadOnly,
-                        decoration: const InputDecoration(
-                          labelText: 'Nombre de la Pieza 2 *',
-                        ),
-                        validator: (v) =>
-                            _incluirPieza2 && (v == null || v.trim().isEmpty)
-                            ? 'Requerido'
-                            : null,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      flex: 2,
-                      child: KeySelectableDropdownFormField<int?>(
-                        key: const ValueKey('edit_p2_rama'),
-                        initialValue: safeP2RamaId,
-                        decoration: const InputDecoration(
-                          labelText: 'Rama Artesanal 2 *',
-                        ),
-                        items: _ramas
-                            .where((r) => r['id'] != null)
-                            .map(
-                              (r) => DropdownMenuItem<int?>(
-                                value: r['id'] as int,
-                                child: Text(r['nombre'] as String),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: _isReadOnly
-                            ? null
-                            : (val) => setState(() => _p2RamaId = val),
-                        validator: (v) =>
-                            _incluirPieza2 && v == null ? 'Requerido' : null,
-                      ),
-                    ),
-                  ],
+                TextFormField(
+                  controller: _p2NombreCtrl,
+                  readOnly: _isReadOnly,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre de la Pieza 2 *',
+                  ),
+                  validator: (v) =>
+                      _incluirPieza2 && (v == null || v.trim().isEmpty)
+                      ? 'Requerido'
+                      : null,
                 ),
                 const SizedBox(height: 16),
                 Row(

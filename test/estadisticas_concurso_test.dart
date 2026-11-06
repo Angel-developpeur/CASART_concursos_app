@@ -40,6 +40,7 @@ void main() {
 
       expect(stats.totalArtesanos, equals(0));
       expect(stats.totalMunicipios, equals(0));
+      expect(stats.totalComunidades, equals(0));
       expect(stats.totalPiezas, equals(0));
       expect(stats.totalHombres, equals(0));
       expect(stats.totalMujeres, equals(0));
@@ -50,6 +51,7 @@ void main() {
       expect(stats.etniasConteo, isEmpty);
       expect(stats.ramasConteo, isEmpty);
       expect(stats.municipiosConteo, isEmpty);
+      expect(stats.comunidadesConteo, isEmpty);
     });
 
     test('Calcula agregaciones con múltiples artesanos, piezas, géneros, etnias y municipios', () {
@@ -228,6 +230,9 @@ void main() {
       expect(stats.totalMunicipios, equals(2)); // Morelia y Pátzcuaro normalizados
       expect(stats.municipiosConteo['Pátzcuaro'], equals(2));
       expect(stats.municipiosConteo['Morelia'], equals(1));
+      expect(stats.totalComunidades, equals(2));
+      expect(stats.comunidadesConteo['Pátzcuaro'], equals(2));
+      expect(stats.comunidadesConteo['Morelia'], equals(1));
 
       expect(stats.etniasConteo['Purépecha'], equals(1));
       expect(stats.etniasConteo['Mestizo / Sin etnia'], equals(1));
@@ -264,6 +269,7 @@ void main() {
         concurso: testConcurso,
         totalArtesanos: 25,
         totalMunicipios: 8,
+        totalComunidades: 11,
         totalPiezas: 42,
         totalCategorias: 4,
         totalSubcategorias: 7,
@@ -285,6 +291,11 @@ void main() {
           'Pátzcuaro': 12,
           'Morelia': 8,
           'Uruapan': 5,
+        },
+        comunidadesConteo: {
+          'Santa Fe De La Laguna': 9,
+          'Capula': 8,
+          'Angahuan': 5,
         },
         categoriasConcurso: testConcurso.categorias,
       );
@@ -319,6 +330,8 @@ void main() {
       expect(find.text('25'), findsWidgets);
       expect(find.text('MUNICIPIOS PARTICIPANTES'), findsOneWidget);
       expect(find.text('8'), findsWidgets);
+      expect(find.text('COMUNIDADES PARTICIPANTES'), findsOneWidget);
+      expect(find.text('11'), findsWidgets);
       expect(find.text('PIEZAS INSCRITAS'), findsOneWidget);
       expect(find.text('42'), findsOneWidget);
       expect(find.text('CATEGORÍAS / SUBCATEGORÍAS'), findsOneWidget);
@@ -345,6 +358,10 @@ void main() {
       expect(find.text('Municipios de Origen'), findsOneWidget);
       expect(find.text('8 municipios'), findsOneWidget);
       expect(find.text('Pátzcuaro'), findsWidgets);
+
+      expect(find.text('Comunidades de Origen'), findsOneWidget);
+      expect(find.text('11 comunidades'), findsOneWidget);
+      expect(find.text('Santa Fe De La Laguna'), findsOneWidget);
 
       expect(find.text('Categorías y Subcategorías'), findsOneWidget);
       expect(find.text('Textiles Tradicionales'), findsOneWidget);

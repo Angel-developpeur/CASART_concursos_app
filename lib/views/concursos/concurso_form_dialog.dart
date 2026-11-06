@@ -407,11 +407,15 @@ class _ConcursoFormDialogState extends ConsumerState<ConcursoFormDialog> {
                           flex: 2,
                           child: DropdownButtonFormField<int>(
                             initialValue: _selectedTipoConcurso,
+                            isExpanded: true,
                             decoration: const InputDecoration(labelText: 'Modalidad / Tipo *'),
                             items: _tiposConcurso.map((t) {
                               return DropdownMenuItem<int>(
                                 value: t['id'] as int,
-                                child: Text(t['nombre'] as String),
+                                child: Text(
+                                  t['nombre'] as String,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               );
                             }).toList(),
                             onChanged: (val) {

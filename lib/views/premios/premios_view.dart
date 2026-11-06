@@ -291,6 +291,7 @@ class _PremiosViewState extends ConsumerState<PremiosView> {
                                 flex: 3,
                                 child: DropdownButtonFormField<int>(
                                   initialValue: selectedTipoPremio,
+                                  isExpanded: true,
                                   decoration: const InputDecoration(
                                     labelText: 'Tipo de Premio',
                                   ),
@@ -298,7 +299,10 @@ class _PremiosViewState extends ConsumerState<PremiosView> {
                                       .map(
                                         (t) => DropdownMenuItem<int>(
                                           value: t['id'] as int,
-                                          child: Text(t['nombre'] as String),
+                                          child: Text(
+                                            t['nombre'] as String,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                         ),
                                       )
                                       .toList(),
@@ -350,6 +354,7 @@ class _PremiosViewState extends ConsumerState<PremiosView> {
                                   flex: 3,
                                   child: DropdownButtonFormField<int>(
                                     initialValue: selectedLugar,
+                                    isExpanded: true,
                                     decoration: const InputDecoration(
                                       labelText: 'Lugar / Posición *',
                                       prefixIcon:
@@ -358,15 +363,24 @@ class _PremiosViewState extends ConsumerState<PremiosView> {
                                     items: const [
                                       DropdownMenuItem<int>(
                                         value: 1,
-                                        child: Text('1er Lugar'),
+                                        child: Text(
+                                          '1er Lugar',
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
                                       DropdownMenuItem<int>(
                                         value: 2,
-                                        child: Text('2do Lugar'),
+                                        child: Text(
+                                          '2do Lugar',
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
                                       DropdownMenuItem<int>(
                                         value: 3,
-                                        child: Text('3er Lugar'),
+                                        child: Text(
+                                          '3er Lugar',
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
                                     ],
                                     onChanged: (v) => setDialogState(() {
@@ -842,111 +856,127 @@ class _PremiosViewState extends ConsumerState<PremiosView> {
               overflow: TextOverflow.ellipsis,
             ),
             actions: [
-              Container(
-                margin: const EdgeInsets.only(right: 16),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: AppTheme.azulLight,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppTheme.azulBorder),
-                ),
-                child: Text(
-                  'Total Bolsa: ${Formatters.formatCurrency(totalPremios)}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.azulAccent,
-                  ),
-                ),
-              ),
-              ExcelExportDropdown(concurso: concurso),
-              if (_ganadores.isNotEmpty) ...[
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.picture_as_pdf, size: 16),
-                  label: const Text('Acta PDF'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFDC2626),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => ActaGanadoresDialog(
-                        concurso: concurso,
-                        ganadores: _ganadores,
-                        initialType: TipoDocumentoGanadores.actaOficial,
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.badge_outlined, size: 16),
-                  label: const Text('Distintivos PDF'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFD97706),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => ActaGanadoresDialog(
-                        concurso: concurso,
-                        ganadores: _ganadores,
-                        initialType: TipoDocumentoGanadores.distintivos,
-                      ),
-                    );
-                  },
-                ),
-              ],
-              const SizedBox(width: 12),
-              if (!concurso.finalizado)
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.add),
-                  label: const Text('Nuevo Premio'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.verdeSuccess,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () => _agregarPremio(concurso),
-                )
-              else
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.blueGrey.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.blueGrey.shade200),
-                  ),
+              Flexible(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Icons.lock_outline,
-                        size: 16,
-                        color: Colors.blueGrey.shade700,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Concurso Finalizado',
-                        style: TextStyle(
-                          color: Colors.blueGrey.shade900,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
+                      Container(
+                        margin: const EdgeInsets.only(right: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.azulLight,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppTheme.azulBorder),
+                        ),
+                        child: Text(
+                          'Total Bolsa: ${Formatters.formatCurrency(totalPremios)}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.azulAccent,
+                          ),
                         ),
                       ),
+                      ExcelExportDropdown(concurso: concurso),
+                      if (_ganadores.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.picture_as_pdf, size: 16),
+                          label: const Text('Acta PDF'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFDC2626),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                          ),
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => ActaGanadoresDialog(
+                                concurso: concurso,
+                                ganadores: _ganadores,
+                                initialType: TipoDocumentoGanadores.actaOficial,
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.badge_outlined, size: 16),
+                          label: const Text('Distintivos PDF'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFD97706),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                          ),
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => ActaGanadoresDialog(
+                                concurso: concurso,
+                                ganadores: _ganadores,
+                                initialType: TipoDocumentoGanadores.distintivos,
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                      const SizedBox(width: 12),
+                      if (!concurso.finalizado)
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.add),
+                          label: const Text('Nuevo Premio'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.verdeSuccess,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () => _agregarPremio(concurso),
+                        )
+                      else
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.blueGrey.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.blueGrey.shade200),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.lock_outline,
+                                size: 16,
+                                color: Colors.blueGrey.shade700,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Concurso Finalizado',
+                                style: TextStyle(
+                                  color: Colors.blueGrey.shade900,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(width: 16),
                     ],
                   ),
                 ),
-              const SizedBox(width: 16),
+              ),
             ],
           ),
           body: _isLoading
@@ -992,7 +1022,10 @@ class _PremiosViewState extends ConsumerState<PremiosView> {
                       Expanded(
                         child: LayoutBuilder(
                           builder: (context, constraints) {
-                            if (constraints.maxWidth < 800) {
+                            final textScale = MediaQuery.textScalerOf(
+                              context,
+                            ).scale(1.0);
+                            if ((constraints.maxWidth / textScale) < 860) {
                               return DefaultTabController(
                                 length: 2,
                                 child: Column(
@@ -1222,7 +1255,11 @@ class _PremiosViewState extends ConsumerState<PremiosView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (showTitle) ...[
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               const Text(
                 'Ganadores Asignados (Dictamen)',
@@ -1231,44 +1268,61 @@ class _PremiosViewState extends ConsumerState<PremiosView> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const Spacer(),
-              if (_ganadores.isNotEmpty) ...[
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.picture_as_pdf, size: 16, color: Color(0xFFDC2626)),
-                  label: const Text('Ver Acta Oficial (PDF)'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => ActaGanadoresDialog(
-                        concurso: concurso,
-                        ganadores: _ganadores,
-                        initialType: TipoDocumentoGanadores.actaOficial,
+              if (_ganadores.isNotEmpty)
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: [
+                    OutlinedButton.icon(
+                      icon: const Icon(
+                        Icons.picture_as_pdf,
+                        size: 16,
+                        color: Color(0xFFDC2626),
                       ),
-                    );
-                  },
-                ),
-                const SizedBox(width: 8),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.badge_outlined, size: 16, color: Color(0xFFD97706)),
-                  label: const Text('Ver Distintivos (PDF)'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => ActaGanadoresDialog(
-                        concurso: concurso,
-                        ganadores: _ganadores,
-                        initialType: TipoDocumentoGanadores.distintivos,
+                      label: const Text('Ver Acta Oficial (PDF)'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                       ),
-                    );
-                  },
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => ActaGanadoresDialog(
+                            concurso: concurso,
+                            ganadores: _ganadores,
+                            initialType: TipoDocumentoGanadores.actaOficial,
+                          ),
+                        );
+                      },
+                    ),
+                    OutlinedButton.icon(
+                      icon: const Icon(
+                        Icons.badge_outlined,
+                        size: 16,
+                        color: Color(0xFFD97706),
+                      ),
+                      label: const Text('Ver Distintivos (PDF)'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                      ),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => ActaGanadoresDialog(
+                            concurso: concurso,
+                            ganadores: _ganadores,
+                            initialType: TipoDocumentoGanadores.distintivos,
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
-              ],
             ],
           ),
           const SizedBox(height: 12),

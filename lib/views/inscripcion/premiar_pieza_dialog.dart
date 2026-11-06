@@ -341,13 +341,16 @@ class _PremiarPiezaDialogState extends ConsumerState<PremiarPiezaDialog> {
                           const SizedBox(height: 12),
 
                           // PASO 2: SELECCIÓN DE PREMIO
-                          Row(
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
+                            alignment: WrapAlignment.spaceBetween,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Text(
                                 '2. Asignar premio a Pieza (${_selectedPieza == 1 ? 'A' : 'B'}):',
                                 style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.casart900),
                               ),
-                              const Spacer(),
                               Text(
                                 '${_premios.length} premio${_premios.length == 1 ? '' : 's'} en convocatoria',
                                 style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
@@ -385,12 +388,13 @@ class _PremiarPiezaDialogState extends ConsumerState<PremiarPiezaDialog> {
                                       ),
                                     ),
                                   )
-                                : Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
+                                : Material(
+                                    color: Colors.white,
+                                    shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: Colors.grey.shade300),
+                                      side: BorderSide(color: Colors.grey.shade300),
                                     ),
+                                    clipBehavior: Clip.antiAlias,
                                     child: ListView.separated(
                                       itemCount: _premios.length + 1,
                                       separatorBuilder: (_, _) => const Divider(height: 1),
@@ -497,7 +501,10 @@ class _PremiarPiezaDialogState extends ConsumerState<PremiarPiezaDialog> {
                                           ),
                                           subtitle: Padding(
                                             padding: const EdgeInsets.only(top: 2),
-                                            child: Row(
+                                            child: Wrap(
+                                              spacing: 8,
+                                              runSpacing: 4,
+                                              crossAxisAlignment: WrapCrossAlignment.center,
                                               children: [
                                                 // Etiqueta de Categoría
                                                 Container(
@@ -520,7 +527,6 @@ class _PremiarPiezaDialogState extends ConsumerState<PremiarPiezaDialog> {
                                                     ),
                                                   ),
                                                 ),
-                                                const SizedBox(width: 8),
 
                                                 // Estatus de disponibilidad
                                                 if (isAsignadoAEstaPieza)

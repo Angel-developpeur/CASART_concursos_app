@@ -713,10 +713,25 @@ class _SearchableSelectFormFieldState extends State<SearchableSelectFormField> {
       state.didChange(selected);
       widget.onChanged?.call(selected);
     }
+
+    if (mounted) {
+      _focusNode.requestFocus();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _focusNode.requestFocus();
+          setState(() {});
+        }
+      });
+    }
   }
 
   KeyEventResult _handleKey(KeyEvent event, FormFieldState<String?> state) {
     if (!widget.enabled) return KeyEventResult.ignored;
+    if (HardwareKeyboard.instance.isControlPressed ||
+        HardwareKeyboard.instance.isAltPressed ||
+        HardwareKeyboard.instance.isMetaPressed) {
+      return KeyEventResult.ignored;
+    }
     if (event is KeyDownEvent) {
       if (event.logicalKey == LogicalKeyboardKey.enter ||
           event.logicalKey == LogicalKeyboardKey.space) {

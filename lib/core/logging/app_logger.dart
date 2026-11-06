@@ -103,7 +103,9 @@ class AppLogger {
         await _rotateLogFile(file);
       }
 
-      _sink = file.openWrite(mode: FileMode.append);
+      if (!await file.exists()) {
+        await file.create(recursive: true);
+      }
       _initialized = true;
 
       // Registrar inicio de la aplicación
@@ -270,12 +272,12 @@ class AppLogger {
 
   static void _writeToFile(String line) {
     try {
-      if (_sink != null) {
-        _sink!.writeln(line);
-        _sink!.flush();
-      } else if (_logFilePath != null) {
-        // En caso de que el sink no estuviera abierto
-        File(_logFilePath!).writeAsStringSync('$line\n', mode: FileMode.append, flush: true);
+      if (_logFilePath != null) {
+        File(_logFilePath!).writeAsStringSync(
+          '$line\n',
+          mode: FileMode.append,
+          flush: true,
+        );
       }
     } catch (e) {
       debugPrint('Error escribiendo en log file: $e');

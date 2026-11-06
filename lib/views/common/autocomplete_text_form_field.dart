@@ -210,6 +210,15 @@ class _AutocompleteTextFormFieldState extends State<AutocompleteTextFormField> {
               selection: TextSelection.collapsed(offset: selection.length),
             );
             widget.onChanged?.call(selection);
+            _focusNode.requestFocus();
+            SchedulerBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                _focusNode.requestFocus();
+                widget.controller.selection = TextSelection.collapsed(
+                  offset: widget.controller.text.length,
+                );
+              }
+            });
           },
           fieldViewBuilder: (
             BuildContext context,
@@ -229,7 +238,18 @@ class _AutocompleteTextFormFieldState extends State<AutocompleteTextFormField> {
               decoration: widget.decoration,
               validator: widget.validator,
               onChanged: widget.onChanged,
-              onFieldSubmitted: (_) => onFieldSubmitted(),
+              onEditingComplete: () {
+                // Evita que EditableText haga unfocus() automáticamente al presionar Enter
+              },
+              onFieldSubmitted: (_) {
+                onFieldSubmitted();
+                focusNode.requestFocus();
+                SchedulerBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    focusNode.requestFocus();
+                  }
+                });
+              },
             );
           },
           optionsViewBuilder: (
@@ -286,6 +306,7 @@ class _AutocompleteTextFormFieldState extends State<AutocompleteTextFormField> {
                             }
 
                             return InkWell(
+                              canRequestFocus: false,
                               onTap: () => onSelected(option),
                               child: Container(
                                 color: isHighlighted
